@@ -362,6 +362,11 @@ export class GDParser {
                     tokens[i - 1] = "";
                     return "";
                 }
+                if (tokens[i - 1] === "->" && tokens[i + 1] === ":") {
+                    // Remove arrow token (return type).
+                    tokens[i - 1] === "";
+                    return "";
+                }
                 // NOT godot labels.
                 return token;
             }
