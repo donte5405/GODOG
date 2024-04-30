@@ -9,6 +9,7 @@ import { GDParser, gdscriptUserLabels } from "./lib/gd.token.mjs";
 import { checkFileExtension } from "./lib/strings.mjs";
 import { loadConfig } from "./lib/options.mjs";
 import { meltDirectory } from "./melt.mjs";
+import { translations } from "./lib/locale.mjs";
 
 
 if (!process.argv[2] || !process.argv[3]) {
@@ -117,6 +118,12 @@ for (const fileLocation of dirOutFiles) {
         }
         await writeFile(fileLocation, str);
     }
+}
+
+
+// Port translations.
+for (const key of Object.keys(translations)) {
+    await writeFile(join(translationLocation, "/tr/", key + ".txt"), translations[key]);
 }
 
 
