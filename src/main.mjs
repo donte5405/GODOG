@@ -105,7 +105,7 @@ for (const fileLocation of dirOutFiles) {
         }
         // Replace all known user labels.
         for (const userLabel of gdscriptUserLabels) {
-            str = str.split(`"${userLabel}"`).join(`"${labels.get(userLabel)}"`).split(`'${userLabel}'`).join(`'${labels.get(userLabel)}'`);
+            str = str.split(`"${userLabel}"`).join(`"${labels.get(userLabel)}"`).split(`'${userLabel}'`).join(`"${labels.get(userLabel)}"`);
         }
         // Parse GDResources.
         if (
