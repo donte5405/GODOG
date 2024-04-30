@@ -281,7 +281,7 @@ export class GDParser {
 
         const isTscn = this.isTscn;
         const commentSymbol = this.commentSymbol;
-        const privateLabels = this.privateLabels;
+        const allPrivateLabels = this.privateLabels;
         const newPrivateLabels = this.newPrivateLabels;
 
         // Process symbols.
@@ -306,7 +306,7 @@ export class GDParser {
                     const privateLabels = token.split(" ").join("").split("#GODOG_PRIVATE:")[1].split(",");
                     for (const privateLabel of privateLabels) {
                         newPrivateLabels[privateLabel] = labels.get();
-                        privateLabels.push(privateLabel);
+                        allPrivateLabels.push(privateLabel);
                     }
                 }
                 // Remove comment.
@@ -365,7 +365,7 @@ export class GDParser {
                 // NOT godot labels.
                 return token;
             }
-            if (privateLabels.includes(token)) {
+            if (allPrivateLabels.includes(token)) {
                 // Replace private token with new token.
                 if (tokens[i - 1] === ".") return token;
                 return newPrivateLabels[token];
