@@ -113,7 +113,7 @@ export function toGodotJson(json) {
 }
 
 /**
- * If specified string is likely a string
+ * If specified string is likely a string path that's used for label references.
  * @param {string} str 
  */
 export function looksLikeStringPath(str) {

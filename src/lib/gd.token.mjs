@@ -73,7 +73,7 @@ export class GDParser {
     }
 
     /**
-     * Parse a string and get the result immediately
+     * Parse a string and get the result immediately.
      * @param {string} str 
      * @param {boolean} isTscn 
      */
@@ -273,8 +273,8 @@ export class GDParser {
 
     /**
      * Parse specified token and decide if the specified token should be returned as what.
-     * @param {string[]} tokens Tokens
-     * @param {number} i Index
+     * @param {string[]} tokens
+     * @param {number} i
      */
     parse(tokens, i) {
         const token = tokens[i];

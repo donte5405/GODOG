@@ -120,7 +120,7 @@ for (const fileLocation of dirOutFiles) {
 }
 
 
-// Melt project
+// Melt project.
 if (config.meltEnabled) {
     console.log("Scrambling project structure...");
     await meltDirectory(dirOutLocation, labels);
