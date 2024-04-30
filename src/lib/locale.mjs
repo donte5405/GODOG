@@ -1,6 +1,5 @@
 //@ts-check
 import { randomUUID } from "crypto";
-import { writeFile } from "fs/promises";
 import { md5 } from "./md5.mjs";
 
 
