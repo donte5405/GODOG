@@ -273,10 +273,14 @@ export class GDParser {
 
     /**
      * Parse specified token and decide if the specified token should be returned as what.
-     * @param {string[]} tokens
+     * @param {string|string[]} tokens
      * @param {number} i
      */
-    parse(tokens, i) {
+    parse(tokens, i = 0) {
+        if (typeof tokens === "string") {
+            tokens = [ tokens ];
+        }
+
         const token = tokens[i];
 
         const isTscn = this.isTscn;

@@ -10,6 +10,7 @@ import { checkFileExtension } from "./lib/strings.mjs";
 import { loadConfig } from "./lib/options.mjs";
 import { meltDirectory } from "./melt.mjs";
 import { translations } from "./lib/locale.mjs";
+import { parseLocaleCsv } from "./lib/locale.csv.mjs";
 
 
 if (!process.argv[2] || !process.argv[3]) {
@@ -71,8 +72,11 @@ const dirOutFiles = fileList(dirOutLocation);
 // Parse GDScript to find user labels.
 console.log("ANALysing project...");
 for (const fileLocation of dirOutFiles) {
-    if (!checkFileExtension(fileLocation, "gd")) continue;
-    await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" })));
+    if (checkFileExtension(fileLocation, "gd")) {
+        await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" })));
+    } else if (checkFileExtension(fileLocation, "gd")) {
+        await writeFile(fileLocation, parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" })));
+    }
 }
 
 
