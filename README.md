@@ -40,11 +40,11 @@ This will generate a new Godot project from `/path/to/your/project` into `/path/
 At the current moment, GODOG only supports one additional option. Simply add it into the `godog.json` file.
 ```js
 {
-    "scrambleGodotProject": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
+    "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
 }
 ```
 
-- `scrambleGodotProject`: `boolean`
+- `scrambleGodotFiles`: `boolean`
 Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the project's root directory.
 
 ---
