@@ -20,5 +20,8 @@
   "dependencies": {
     "@fry/base62": "^1.1.0",
     "fast-xml-parser": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7"
   }
 }
