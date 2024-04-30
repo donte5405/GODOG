@@ -136,3 +136,7 @@ if (config.meltEnabled) {
 
 // Export debug symbols in dev folder.
 await writeFile(join(dirLocation, "/dbg.sym.json"), labels.exportDebugSymbols());
+
+
+// Indicate when it's done.
+console.log("Done!");
