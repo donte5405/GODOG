@@ -2,11 +2,13 @@
 import { fileList } from "./file.list.mjs";
 import { XMLParser } from "fast-xml-parser";
 import { readFile } from "fs/promises";
-import { join } from "path";
+import { dirname, join } from "path";
+import { fileURLToPath } from 'url';
 import { gdKeywords } from "./gd.keywords.mjs";
 
 
-const classesPath = join(process.cwd(), "/classes");
+const __filename = fileURLToPath(import.meta.url);
+const classesPath = join(dirname(__filename), "../", "../", "/classes");
 
 
 const parser = new XMLParser({
