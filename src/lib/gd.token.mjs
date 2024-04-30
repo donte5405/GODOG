@@ -357,12 +357,12 @@ export class GDParser {
                 return "";
             }
             if (godotLabels.includes(token)) {
-                if (tokens[i - 1] === ":" && tokens[i + 1] === "=") {
+                if (tokens[i - 3] === "var" && tokens[i - 1] === ":" && tokens[i + 1] === "=") {
                     // Remove explicit type casting.
                     tokens[i - 1] = "";
                     return "";
                 }
-                if (tokens[i - 1] === "->" && tokens[i + 1] === ":") {
+                if (tokens[i - 2] === ")" && tokens[i - 1] === "->" && tokens[i + 1] === ":") {
                     // Remove arrow token (return type).
                     tokens[i - 1] === "";
                     return "";
