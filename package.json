@@ -1,0 +1,24 @@
+{
+  "name": "godog",
+  "version": "0.0.1",
+  "description": "Because not all Godot projects should be (physically) open source!",
+  "main": "main.mjs",
+  "scripts": {
+    "test": "node ./test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "github.com/donte5405/godog"
+  },
+  "keywords": [
+    "godot",
+    "export",
+    "obfuscator"
+  ],
+  "author": "Donte5405",
+  "license": "MIT",
+  "dependencies": {
+    "@fry/base62": "^1.1.0",
+    "fast-xml-parser": "^4.3.6"
+  }
+}
