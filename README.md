@@ -264,6 +264,75 @@ Unlike Godot's translation function, this translation function works differently
 
 ---
 
+### TIP: Using "Wrong" GDScript Name Styles
+Because following style guides in GDScript increases risks of user labels hitting Godot internal labels, making this tool less effective. To help on this, using "these" style guides will help GODOG identifying user labels a lot easier.
+
+- `PascalCase` for publicily accessible labels and function names.
+- `_PascalCase` (with an underscore in front of it) for privately accessible labels. 
+- `_camelCase` (with an underscore in front of it) for local labels.
+
+Here's an example of how this will work:
+```gdscript
+extends Node
+
+#GODOG_PRIVATE: _Target, _nodeToWait, _prevModulate, _stt, _prevPos, _prevScale
+#GODOG_PRIVATE: Start
+
+export var TargetPath := NodePath("..")
+export var Duration := 1.0
+export var Delay := 0.0
+export var Reverse := false
+export var WaitFor: NodePath
+export var WaitForSignal := "SignalName"
+export(String, "_None", "_Slide", "_Scale") var AdditionalEffects := "_None"
+export(String, "_Bottom", "_Left", "_Right", "_Top") var SlideFrom := "_Bottom"
+
+onready var _Target := get_node(TargetPath) as Control
+
+func _ready() -> void:
+	var _nodeToWait := get_node_or_null(WaitFor)
+	if is_instance_valid(_nodeToWait):
+		yield(_nodeToWait, WaitForSignal)
+	Start()
+
+func Start() -> void:
+	if Duration <= 0:
+		return
+	var _prevModulate := Color.transparent if Reverse else _Target.modulate
+	_Target.modulate = _Target.modulate if Reverse else Color.transparent
+	_Target.visible = Reverse
+	if Delay:
+		yield(get_tree().create_timer(Delay), "timeout")
+	_Target.visible = true
+	yield(get_tree(), "idle_frame")
+	var _stt := get_tree().create_tween()
+	_stt.tween_property(_Target, "modulate", _prevModulate, Duration)
+	match AdditionalEffects:
+		"_Slide":
+			var _posStart := Vector2()
+			match SlideFrom:
+				"_Left":
+					_posStart = _Target.rect_position + Vector2.LEFT * 1000
+				"_Right":
+					_posStart = _Target.rect_position + Vector2.RIGHT * 1000
+				"_Top":
+					_posStart = _Target.rect_position + Vector2.UP * 1000
+				"_Bottom":
+					_posStart = _Target.rect_position + Vector2.DOWN * 1000
+			var _prevPos := _posStart if Reverse else _Target.rect_position
+			_Target.rect_position = _Target.rect_position if Reverse else _posStart
+			_stt.parallel().tween_property(_Target, "rect_position", _prevPos, Duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		"_Scale":
+			var _prevScale := Vector2.ZERO if Reverse else _Target.rect_scale
+			_Target.rect_scale = _Target.rect_scale if Reverse else Vector2.ZERO
+			_stt.parallel().tween_property(_Target, "rect_scale", _prevScale, Duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	if Reverse:
+		_stt.connect("finished", _Target, "hide")
+
+```
+
+---
+
 ### Limitations
 - **It loves destroying GUI strings.**
 - Only works with Godot 3.x at the moment.
