@@ -318,19 +318,18 @@ export class GDParser {
                 let str = formatStringQuote(token);
                 if (isTscn) {
                     str = toStandardJson(str);
-                    
                 }
                 str = JSON.parse(str);
-                if (looksLikeStringPath(str)) {
+                if (hasTranslations(str)) {
+                    // If it has translation strings.
+                    str = parseTranslations(str);
+                } else if (looksLikeStringPath(str)) {
                     // If it looks like index access.
                     const strSplitSlash = str.split("/");
                     const strSplitColon = strSplitSlash.splice(strSplitSlash.length - 1)[0].split(":");
                     this.parseTokens(strSplitSlash);
                     this.parseTokens(strSplitColon);
                     str = [ ...strSplitSlash, strSplitColon.join(":") ].join("/");
-                } else if (hasTranslations(str)) {
-                    // If it has translation strings.
-                    str = parseTranslations(str);
                 }
                 str = JSON.stringify(str);
                 if (isTscn) {
