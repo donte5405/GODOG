@@ -19,7 +19,7 @@ No, nor it's even remotely close. This only strips away anything that Godot does
 ---
 
 ### Then What's The Point?
-Online games being made with Godot without any of custom toolchains to scramble its source code will be vulnerable by default. In commercial scenarios it's absolutely undesirable to have the source code always readable, even with the scenario where you have the game operated mostly server-side. Even if the game is just for the display, if the server logic is easily replicable, there's nothing that stops bad actors to develop custom clients to gain advantages in your game and skip your "legitimate" client completely, or even using your "client shell" for their own games being operated underground. This project adds extra tasks to those bad actors trying to take advantage from your Godot project.
+Online games being made with Godot without any of custom toolchains to scramble its source code will be vulnerable by default. In commercial scenarios it's absolutely undesirable to have the source code always readable and especially easily alterable, even with the scenario where you have the game operated mostly server-side. Even if the game is just for the display, if the server logic is easily replicable, there's nothing that stops bad actors to develop custom clients to gain advantages in your game and skip your "legitimate" client completely, or even using your "client shell" for their own games being operated underground. This project adds extra tasks to those bad actors trying to take advantage on your Godot project.
 
 ---
 
