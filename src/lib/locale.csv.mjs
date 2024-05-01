@@ -20,11 +20,12 @@ This CSV structure will NOT be accepted by GODOG and WILL NOT be processed:
 
 ---
 
-"keys","en","es","fr"
-"Greeting","Hello!","¡Hola!","Bonjour!"
-"Goodbye","Bye!","Adiós!","Au revoir!"
+keys,en,es,fr
+Greeting,Hello!,¡Hola!",Bonjour!
+Goodbye",Bye!,Adiós!,Au revoir!
 
 `;
+let guidedUsers = false;
 
 
 const commonCsvSeparators = [ ",", "\t", " ", ";", ];
@@ -32,6 +33,8 @@ const commonCsvSeparators = [ ",", "\t", " ", ";", ];
 
 function printError(reason = "", filePath = "") {
 	console.error(new Error(`The CSV string sequence${filePath ? ` of the file "${filePath}" ` : ` `}${reason}.`));
+	if (guidedUsers) return;
+	guidedUsers = true;
 	console.log(docLocaleCsvGuide);
 }
 
