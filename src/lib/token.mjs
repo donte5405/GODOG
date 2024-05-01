@@ -1,4 +1,5 @@
 //@ts-check
+import { writeFile } from "fs/promises";
 import { allowedNumberSymbols, asciiNumbers, asciiSymbols, isLabel, isString } from "./strings.mjs";
 
 
@@ -64,9 +65,7 @@ export function tokenise(str, mode = "gd") {
 		const c = str[i];
 		if (asciiSymbols.includes(c)) {
 			switch (c) {
-				case " ":
-					skipBuffer();
-					break;
+				case " ": skipBuffer(); return;
 				case ";":
 					if (mode == "tscn") {
 						setState("comment");
@@ -187,20 +186,7 @@ export function tokenise(str, mode = "gd") {
 				pushBuffer();
 				return true;
 			case "symbol":
-				if (asciiSymbols.includes(c)) {
-					switch (c) {
-						case " ":
-							skipBuffer();
-							return true;
-						//case "#":
-						case `"`: case `'`:
-							return false;
-						default:
-							pushBuffer();
-							submitBuffer();
-							return false;
-					}
-				}
+				pushBuffer();
 				return false;
 		}
 	};
