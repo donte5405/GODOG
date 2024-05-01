@@ -35,10 +35,16 @@ export const allowedIndexedCharacters = "/:.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ
 /**
  * Check if a path has a speficied file extension.
  * @param {string} path
- * @param {string} extension 
+ * @param {string|string[]} extension 
  */
 export function checkFileExtension(path, extension) {
-    return path.length - path.indexOf("." + extension) === extension.length + 1;
+    if (typeof extension === "string") {
+        extension = [ extension ];
+    }
+    for (const e of extension) {
+        if (path.length - path.indexOf("." + e) === e.length + 1) return true;
+    }
+    return false;
 }
 
 

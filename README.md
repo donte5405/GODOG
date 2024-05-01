@@ -23,8 +23,38 @@ Online games being made with Godot without any of custom toolchains to scramble 
 
 ---
 
-### How To Use?
-Make sure that you have Node.JS 21.6.2 or later. Clone this project, then run this command:
+### Prerequisites
+Make sure that you have Node.JS 21.6.2 or later.
+
+Clone this project, and download Godot's source code from the repository (can be either from cloning or via ZIP). Don't forget to check if the version you use matches with the version that you're using to develop the game. Also make sure that the source code's directory is named `godot`.
+
+The file sturcture of the GODOG repo directory should be as below:
+
+```
+- gd
+- godot
+- node_modules
+- src
+- .gitignore
+- godog.sh
+- godot.labels.gen.sh
+- package-lock.json
+- package.json
+- README.md
+```
+
+Then, run this command:
+
+```sh
+./godot.labels.gen.sh
+```
+
+It will start generating possible Godot labels the best effort it can, this need to be run only once.
+
+---
+
+### Using GODOG
+To start converting the project into a scrambled one, run the command below:
 
 ```sh
 ./godog.sh /path/to/your/project /path/to/target/folder
@@ -81,65 +111,18 @@ This GDScript macro indentifies any labels that the user want it to be private f
 #GODOG_PRIVATE:_velocity
 ```
 
-
-#### 3. Quad Underscore Mangler
-This macro works in all Godot file types (`.gd`, `.tscn`, `.tres`) and will mangle string names into randomsied strings. Put this macro at anywhere you want any strings to be mangled.
-
-Consider this node name structure, for example:
-
-```
-- ScnStart
-    - Title
-    - ButtonPlay
-    - ButtonOptions
-    - ButtonQuit
-```
-
-Simply putting names in bracket:
-
-```
-- ____ScnStart____
-    - ____Title____
-    - ____ButtonPlay____
-    - ____ButtonOptions____
-    - ____ButtonQuit____
-```
-
-GODOG will turn all of them into:
-
-```
-- _2Q
-    - _VE
-    - _e9
-    - _Uf
-    - _cq
-```
-
-This works with virtually everything, including node groups. Making it a lot more difficult to restore node structures back or search for node names in order to brute-force `Find in files` string searches. This effect becomes a lot more enhances if names are all unique in every single scene. The easiest way is to simply put a prefix that corresponds to the root node name of the scene file:
-
-```
-- ____ScnStart____
-    - ____ScnStart_Title____
-    - ____ScnStart_ButtonPlay____
-    - ____ScnStart_ButtonOptions____
-    - ____ScnStart_ButtonQuit____
-```
-
-If it's too cubersome to use, telling GODOG in GDScript via `#GODOG_LABEL` can be a lot easier.
-
-```gdscript
-#GODOG_LABEL:ScnStart
-#GODOG_LABEL:ScnStart_Title
-#GODOG_LABEL:ScnStart_ButtonPlay
-#GODOG_LABEL:ScnStart_ButtonOptions
-#GODOG_LABEL:ScnStart_ButtonQuit
-```
-
 ---
 
 ### CAUTION (MUST READ)
 
-Since this project involves a complete string manipulation, it may introduce undesirable side effects from such procedure, and this could cause both representation problems (the game displays scrambled text), or **rendering API communications and data read/write** on storage **completely broken**.
+Since this project involves a complete string manipulation, it may introduce undesirable side effects from such procedure, and this could cause both representation problems (the game displays scrambled text), or **rendering API communications and data read/write** on storage **completely broken**, **or rendering the game unplayable**.
+
+First and foremost, Unless it's absolutely intentional for reasons (see below), **DO NOT name strings with anything but Roman characters and underscore (`_`)**, since GODOG can't detect it efficiently, especially in Godot resource (`.tscn`/`.tres`) files.
+
+```gdscript
+"this_is_my_string" # correct
+"this-is-my-string" # WRONG, GODOG CAN'T DETECT KEBAB CASE LABELS!
+```
 
 On the text display issue, simply workaround it by adding extra characters into strings in order to prevent it from being manipulated, for example, empty space (space bar). Using Godot translation functionality also helps avoiding this issue.
 
@@ -231,7 +214,7 @@ It may sound absurd, but translation mechanism involves determining which string
 
 ```csv
 "key","en"
-"____greeting___","Hello world!"
+"GREETING","Hello world!"
 ```
 
 After GODOG manages to mangle CSV files, Godot also automatically converts  the mangled CSV table into loadable binary and leave the CSV files in PCK exports.

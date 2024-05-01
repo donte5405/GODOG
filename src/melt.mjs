@@ -65,18 +65,11 @@ export async function meltDirectory(realPath, labels) {
         const fileExtension = pathDotSplit[pathDotSplit.length - 1];
         const newFileName = labels.get() + "." + fileExtension;
         const newFilePath = rootPath + newFileName;
-        if ((
-            checkFileExtension(oldFilePath, "cfg") ||
-            checkFileExtension(oldFilePath, "godot")
-        ) || hasFile("default_env.tres", oldFilePath)) {
+        if (checkFileExtension(oldFilePath, [ "cfg", "godot" ]) || hasFile("default_env.tres", oldFilePath)) {
             filesToChange.push(oldFilePath);
             continue;
         }
-        if (!(
-            checkFileExtension(oldFilePath, "tscn") ||
-            checkFileExtension(oldFilePath, "tres") ||
-            checkFileExtension(oldFilePath, "gd")
-        )) {
+        if (!checkFileExtension(oldFilePath, [ "tscn", "tres", "gd" ])) {
             continue;
         }
         const oldGodotPath = "res://" + oldFilePath.split(rootPath)[1];

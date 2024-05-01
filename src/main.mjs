@@ -5,7 +5,7 @@ import { join, resolve } from "path";
 import { dirList, fileList } from "./lib/file.list.mjs";
 import { labels } from "./lib/labels.mjs";
 import { shuffleArray } from "./lib/shuffle.mjs";
-import { GDParser, gdscriptUserLabels } from "./lib/gd.token.mjs";
+import { GDParser } from "./lib/gd.token.mjs";
 import { checkFileExtension } from "./lib/strings.mjs";
 import { loadConfig } from "./lib/options.mjs";
 import { meltDirectory } from "./melt.mjs";
@@ -69,59 +69,29 @@ console.log("Listing all files...");
 const dirOutFiles = fileList(dirOutLocation);
 
 
-// Parse GDScript to find user labels.
-console.log("ANALysing project...");
+console.log("Parsing GDScripts and CSVs...");
 for (const fileLocation of dirOutFiles) {
+    // Parse GDScript.
     if (checkFileExtension(fileLocation, "gd")) {
         await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" })));
-    } else if (checkFileExtension(fileLocation, "gd")) {
-        await writeFile(fileLocation, parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" })));
+    }
+    // Parse CSV.
+    else if (checkFileExtension(fileLocation, "csv")) {
+        let str = await readFile(fileLocation, { encoding: "utf-8" });
+        const lines = parseLocaleCsv(str).split("\n");
+        const firstLine = lines.splice(0, 1);
+        shuffleArray(lines);
+        str = [...firstLine, ...lines].join("\n");
+        await writeFile(fileLocation, str);
     }
 }
 
 
-// Start processing all files.
-console.log("Screwing up files...");
+// Parse GDResources.
+console.log("Parsing GDResources...");
 for (const fileLocation of dirOutFiles) {
-    if (
-        checkFileExtension(fileLocation, "godot") ||
-        checkFileExtension(fileLocation, "tscn") ||
-        checkFileExtension(fileLocation, "tres") ||
-        checkFileExtension(fileLocation, "gd") ||
-        checkFileExtension(fileLocation, "csv")
-    ) {
-        let str = await readFile(fileLocation, { encoding: "utf-8" });
-        // Reformat strings to scrambled ones.
-        for (const splitter of ["____"]) {
-            const lines = str.split(splitter);
-            if (lines.length % 2 === 0)
-                throw new Error(`There's incomplete enclosed quad underscore in the file ${fileLocation}`);
-            for (let i = 1; i < lines.length; i += 2) {
-                lines[i] = labels.get(lines[i]);
-            }
-            str = lines.join("");
-        }
-        // Scramble rows to confuse deobfuscator.
-        if (checkFileExtension(fileLocation, "csv")) {
-            const lines = str.split("\n");
-            const firstLine = lines.splice(0, 1);
-            shuffleArray(lines);
-            str = [...firstLine, ...lines].join("\n");
-        }
-        // Replace all known user labels.
-        for (const userLabel of gdscriptUserLabels) {
-            str = str.split(`"${userLabel}"`).join(`"${labels.get(userLabel)}"`).split(`'${userLabel}'`).join(`"${labels.get(userLabel)}"`);
-        }
-        // Parse GDResources.
-        if (
-            checkFileExtension(fileLocation, "godot") ||
-            checkFileExtension(fileLocation, "tscn") ||
-            checkFileExtension(fileLocation, "tres")
-        ) {
-            str = GDParser.parseStr(str, true);
-        }
-        await writeFile(fileLocation, str);
-    }
+    if (!checkFileExtension(fileLocation, [ "godot", "tscn", "tres" ])) continue;
+    await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), true));
 }
 
 

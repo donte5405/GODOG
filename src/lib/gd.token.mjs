@@ -2,55 +2,20 @@
 import { labels } from "./labels.mjs";
 import { godotLabels } from "./godot.labels.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
-import { allowedNumberSymbols, asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
+import { asciiNumbers, asciiSymbols, formatStringQuote, isString, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
+import { assemble, tokenise } from "./token.mjs";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
+// import { fileURLToPath } from "url";
+// import { dirname, join } from "path";
+
+
+// const __filename = fileURLToPath(import.meta.url);
+// const testPath = join(dirname(__filename), "../", "../", "/TEST");
 
 
 /** @type {string[]} User-defined labels. */
 export const gdscriptUserLabels = [];
-
-
-const gdComboSymbols = [
-    // Common in most languages.
-    "**=", "<<=", ">>=",
-    "<<", ">>", "==", "!=", "<=", ">=", "+=",
-    "-=", "*=", "/=", "%=", "|=", "&&", "||",
-    "^^", "++", "--",
-    // GDScript
-    "->", ":=",
-];
-
-
-/**
- * Converts space to tab.
- * @param {string} str 
- */
-function convertSpaceToTab(str) {
-    const strs = str.split("\n");
-    let inString = false;
-    for (let i = 0; i < strs.length; i++) {
-        if (!inString) {
-            const lines = strs[i].split("");
-            if (lines[0] !== " ") continue;
-            for (let j = 0; j < lines.length; j++) {
-                if (lines[j] === " ") {
-                    lines[j] = "\t";
-                    continue;
-                }
-                break;
-            }
-            strs[i] = lines.join("");
-        }
-        if (strs[i].includes(`"""`)) {
-            if (strs[i].split(`"""`).length > 2) {
-                throw new Error(`Multiple multiline strings in single line isn't supported.`);
-            }
-            inString = !inString;
-        }
-    }
-    return strs.join("\n");
-}
 
 
 /** Token parser object. */
@@ -69,7 +34,6 @@ export class GDParser {
      */
     constructor(isTscn = false) {
         this.isTscn = isTscn;
-        this.commentSymbol = isTscn ? ";" : "#";
     }
 
     /**
@@ -79,10 +43,13 @@ export class GDParser {
      */
     static parseStr(str, isTscn = false) {
         const o = new this(isTscn);
+        // const uuid = randomUUID();
         // const a = o.tokenise(str);
+        // writeFileSync(testPath + "/" + uuid + ".a.json", JSON.stringify(a) );
         // const b = o.parseTokens(a);
+        // writeFileSync(testPath + "/" + uuid + ".b.json", JSON.stringify(b) );
         // const c = o.assemble(b);
-        // writeFileSync(process.cwd() + "/TEST/" + randomUUID() + ".json", JSON.stringify(a) );
+        // writeFileSync(testPath + "/" + uuid + ".c.tscn", c );
         // return c;
         // return o.assemble(o.parseTokens(a));
         return o.assemble(o.parseTokens(o.tokenise(str)));
@@ -93,180 +60,16 @@ export class GDParser {
      * @param {string} str 
      */
     tokenise(str) {
-        const commentSymbol = this.commentSymbol;
-        str = convertSpaceToTab(str);
-
-        /** @type {string[]} */
-        const strs = [];
-        let i = 0;
-        let buffer = "";
-        let escapeChar = 0;
-        let strThreeQuotes = false;
-
-        const entryState = () => {
-            submitBuffer();
-            const c = str[i];
-            if (asciiSymbols.includes(c)) {
-                switch (c) {
-                    case " ":
-                        skipBuffer();
-                        break;
-                    case commentSymbol:
-                        setState("comment");
-                        break;
-                    case `"`: case `'`:
-                        if (str[i + 1] === c && str[i + 2] === c) {
-                            i += 2;
-                            strThreeQuotes = true;
-                            setState("string", 3);
-                        } else {
-                            setState("string");
-                        }
-                        break;
-                    default: setState("symbol"); break;
-                }
-            } else if (asciiNumbers.includes(c)) {
-                setState("number");
-            } else {
-                setState("label");
-            }
-        };
-
-        const setState = (state = "", pushBufferCount = 0) => {
-            pushBuffer(pushBufferCount);
-            while (runState(state)) {
-                if (i < str.length) continue;
-                break;
-            }
-        };
-
-        const runState = (state = "") => {
-            const c = str[i];
-            switch (state) {
-                default:
-                    throw new Error("unknown state reached");
-                case "comment":
-                    if (c === "\n") {
-                        return false;
-                    }
-                    pushBuffer();
-                    return true;
-                case "label":
-                    if (asciiSymbols.includes(c)) {
-                        return false;
-                    }
-                    pushBuffer();
-                    return true;
-                case "number":
-                    if (allowedNumberSymbols.includes(c)) {
-                        pushBuffer();
-                        return true;
-                    }
-                    return false;
-                case "string":
-                    if (escapeChar) {
-                        if (c === "U") {
-                            escapeChar += 6;
-                        } else if (c === "u") {
-                            escapeChar += 4;
-                        }
-                        escapeChar--;
-                        pushBuffer();
-                        return true;
-                    }
-                    if (c === "\\") {
-                        escapeChar++;
-                        pushBuffer();
-                        return true;
-                    }
-                    if (c === stringSymbol()) {
-                        if (strThreeQuotes) {
-                            if (!(str[i + 1] === c && str[i + 2] === c)) {
-                                throw new Error(`Error parsing at the character index ${i}, incomplete triple string bracket.`);
-                            } else {
-                                pushBuffer(3);
-                                strThreeQuotes = false;
-                                i += 2;
-                            }
-                        } else {
-                            pushBuffer();
-                        }
-                        return false;
-                    }
-                    pushBuffer();
-                    return true;
-                case "symbol":
-                    if (asciiSymbols.includes(c)) {
-                        switch (c) {
-                            case " ":
-                                skipBuffer();
-                                return true;
-                            case commentSymbol:
-                            case `"`: case `'`:
-                                return false;
-                            default:
-                                pushBuffer();
-                                submitBuffer();
-                                return true;
-                        }
-                    }
-                    return false;
-            }
-        };
-
-        const pushBuffer = (count = 1) => {
-            for (let x = 0; x < count; x++) {
-                buffer += str[i];
-                i ++;
-            }
-        };
-
-        const skipBuffer = (count = 1) => {
-            i += count;
-        };
-
-        const submitBuffer = () => {
-            if (buffer.length > 0) {
-                strs.push(buffer);
-                buffer = "";
-            }
-        };
-
-        const stringSymbol = () => buffer[0];
-
-        // Initnal state decision.
-        if (asciiNumbers.includes(str[0])) {
-            throw new Error("First character in the script can't start with number.");
-        }
-
-        // Process state.
-        while (i < str.length) {
-            entryState();
-        }
-
-
-        /** @type {string[]} */
-        const postStrs = [];
-        for (let i = 0; i < strs.length; i++) {
-            let symbol = strs[i] + strs[i + 1];
-            if (gdComboSymbols.includes(symbol)) {
-                // Group symbols together
-                postStrs.push(symbol);
-                i += 1;
-                continue;
-            }
-            postStrs.push(strs[i]);
-        }
-        return postStrs;
+        return tokenise(str, this.isTscn ? "tscn" : "gd");
     }
 
     /**
      * Parse the token and process it.
      * @param {string[]} tokens 
      */
-    parseTokens(tokens) {
+    parseTokens(tokens, isInStringPathOfTscn = false) {
         for (let i = 0; i < tokens.length; i++) {
-            tokens[i] = this.parse(tokens, i);
+            tokens[i] = this.parse(tokens, i, isInStringPathOfTscn);
         }
         return tokens;
     }
@@ -275,46 +78,54 @@ export class GDParser {
      * Parse specified token and decide if the specified token should be returned as what.
      * @param {string|string[]} tokens
      * @param {number} i
+     * @param {boolean} isInStringPathOfTscn ONLY USE THIS WHEN IT'S PROCESSED IN TSCN STRINGS!
      */
-    parse(tokens, i = 0) {
+    parse(tokens, i = 0, isInStringPathOfTscn = false) {
         if (typeof tokens === "string") {
-            tokens = [ tokens ];
+            tokens = [tokens];
         }
 
         const token = tokens[i];
-
         const isTscn = this.isTscn;
-        const commentSymbol = this.commentSymbol;
         const allPrivateLabels = this.privateLabels;
         const newPrivateLabels = this.newPrivateLabels;
 
         // Process symbols.
         if (asciiSymbols.includes(token[0])) {
-            // Remove inferred type casting.
-            if (token === ":=") {
-                return "=";
-            }
-            
-            // Parse comment.
-            if (token[0] === commentSymbol) {
-                if (token.indexOf("#GODOG_LABEL:") === 0) {
-                    // Define scrambled label.
-                    const userLabels = token.split(" ").join("").split("#GODOG_LABEL:")[1].split(",");
-                    for (const userLabel of userLabels) {
-                        gdscriptUserLabels.push(userLabel);
-                        labels.get(userLabel);
-                    }
+            // For GDScript only.
+            if (!isTscn) {
+                // Remove inferred type casting.
+                if (token === ":=") {
+                    return "=";
                 }
-                if (token.indexOf("#GODOG_PRIVATE:") === 0) {
-                    // Define private labels.
-                    const privateLabels = token.split(" ").join("").split("#GODOG_PRIVATE:")[1].split(",");
-                    for (const privateLabel of privateLabels) {
-                        newPrivateLabels[privateLabel] = labels.get();
-                        allPrivateLabels.push(privateLabel);
+                // Parse comment.
+                if (token[0] === "#") {
+                    const tokenNsp = token.split(" ").join("");
+                    "#GODOG_LABEL:";
+                    if (tokenNsp.indexOf("#GODOG_LABEL:") === 0) {
+                        // Define scrambled label.
+                        const userLabels = tokenNsp.split(" ").join("").split("#GODOG_LABEL:")[1].split(",");
+                        for (const userLabel of userLabels) {
+                            gdscriptUserLabels.push(userLabel);
+                            labels.get(userLabel);
+                        }
+                        // Remove comment.
+                        return "";
                     }
+                    "#GODOG_PRIVATE:";
+                    if (tokenNsp.indexOf("#GODOG_PRIVATE:") === 0) {
+                        // Define private labels.
+                        const privateLabels = tokenNsp.split(" ").join("").split("#GODOG_PRIVATE:")[1].split(",");
+                        for (const privateLabel of privateLabels) {
+                            newPrivateLabels[privateLabel] = labels.get();
+                            allPrivateLabels.push(privateLabel);
+                        }
+                        // Remove comment.
+                        return "";
+                    }
+                    // Remove comment.
+                    return "";
                 }
-                // Remove comment.
-                return "";
             }
 
             // Parse user-defined strings.
@@ -331,9 +142,9 @@ export class GDParser {
                     // If it looks like index access.
                     const strSplitSlash = str.split("/");
                     const strSplitColon = strSplitSlash.splice(strSplitSlash.length - 1)[0].split(":");
-                    this.parseTokens(strSplitSlash);
-                    this.parseTokens(strSplitColon);
-                    str = [ ...strSplitSlash, strSplitColon.join(":") ].join("/");
+                    this.parseTokens(strSplitSlash, true);
+                    this.parseTokens(strSplitColon, true);
+                    str = [...strSplitSlash, strSplitColon.join(":")].join("/");
                 }
                 str = JSON.stringify(str);
                 if (isTscn) {
@@ -352,6 +163,17 @@ export class GDParser {
         if (isTscn) {
             // For GDResource files.
             if (gdscriptUserLabels.includes(token)) return labels.get(token);
+            if (isInStringPathOfTscn) {
+                if (godotLabels.includes(token)) {
+                    // Ignore Godot labels.
+                    return token;
+                }
+                if (!gdscriptUserLabels.includes(token)) {
+                    // Note it in user labels.
+                    gdscriptUserLabels.push(token);
+                }
+                return labels.get(token);
+            }
         } else {
             // For GDScript files
             if (token === "as" && godotLabels.includes(tokens[i + 1])) {
@@ -378,8 +200,10 @@ export class GDParser {
                 if (tokens[i - 1] === ".") return token;
                 return newPrivateLabels[token];
             }
-            // Note it in user labels.
-            gdscriptUserLabels.push(token);
+            if (!gdscriptUserLabels.includes(token)) {
+                // Note it in user labels.
+                gdscriptUserLabels.push(token);
+            }
             return labels.get(token);
         }
         return token;
@@ -390,23 +214,6 @@ export class GDParser {
      * @param {string[]} token 
      */
     assemble(token) {
-        /** @type {string[]} */
-        const newToken = [];
-        for (let i = 0; i < token.length; i++) {
-            const t1st = token[i];
-            if (t1st) {
-                newToken.push(t1st);
-                const t2nd = token[i + 1];
-                if (t2nd) {
-                    if (
-                        (!asciiSymbols.includes(t1st[0]) && !asciiSymbols.includes(t2nd[0])) ||
-                        (isString(t1st) && isLabel(t2nd)) || (isLabel(t1st) && isString(t2nd))
-                    ) {
-                        newToken.push(" ");
-                    }
-                }
-            }
-        }
-        return newToken.join("");
+        return assemble(token);
     }
 }
