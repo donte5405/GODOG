@@ -119,7 +119,7 @@ export async function huntLabels(sourcePath) {
     /** @type {string[]} */
     const xmlLabels = [];
     /** @type {string[]} */
-    const labels = [ "_" ];
+    const labels = [];
     /** @type {string[]} */
     const bannedLabels = [];
     
@@ -175,6 +175,7 @@ export async function huntLabels(sourcePath) {
         push(name);
     }
 
+    push("_"); // FIX: Default case not being included.
     console.log(`There are ${labels.length} labels in total.`);
     return labels;
 }
