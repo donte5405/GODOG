@@ -117,6 +117,8 @@ function parseXml(targetLabels, str) {
  */
 export async function huntLabels(sourcePath) {
     /** @type {string[]} */
+    const xmlLabels = [];
+    /** @type {string[]} */
     const labels = [ "_" ];
     /** @type {string[]} */
     const bannedLabels = [];
@@ -140,7 +142,7 @@ export async function huntLabels(sourcePath) {
                 console.log("Processing '" + filePath + "'...");
                 const srcStr = await readFile(filePath, { encoding: "utf-8" });
                 if (checkFileExtension(filePath, "xml")) {
-                    try { parseXml(labels, srcStr); } catch {}
+                    try { parseXml(xmlLabels, srcStr); } catch {}
                 } else if (checkFileExtension(filePath, [ "h", "hpp", "c", "cpp", ])) {
                     const tokens = tokenise(srcStr, "clang");
                     for (let i = 0; i < tokens.length; i++) {
@@ -167,6 +169,13 @@ export async function huntLabels(sourcePath) {
         console.log(`Currently there are ${labels.length} labels in total.`);
     }
 
+    // Always include XML labels.
+    bannedLabels.length = 0;
+    for (const name of xmlLabels) {
+        push(name);
+    }
+
+    console.log(`There are ${labels.length} labels in total.`);
     return labels;
 }
 
