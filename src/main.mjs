@@ -75,19 +75,19 @@ for (const fileLocation of dirOutFiles) {
     if (checkFileExtension(fileLocation, "gd")) {
         // Check GDScripts.
         GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }));
-    } else if (checkFileExtension(fileLocation, [ "tscn", "tres" ])) {
+    } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Check GDResources.
         GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), true);
     } else if (checkFileExtension(fileLocation, "csv")) {
-        // Parse CSV. This is the only file extension that can be parsed ahead of time.
-        let str = await readFile(fileLocation, { encoding: "utf-8" });
-        const lines = parseLocaleCsv(str).split("\n");
-        const firstLine = lines.splice(0, 1);
-        shuffleArray(lines);
-        str = [...firstLine, ...lines].join("\n");
-        await writeFile(fileLocation, str);
+        // Check CSV.
+        parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" }));
     }
 }
+
+
+// Compress labels length.
+console.log("Compressing long-ass user labels...");
+labels.compress();
 
 
 // Scramble!
@@ -99,6 +99,14 @@ for (const fileLocation of dirOutFiles) {
     } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Parse GDResources.
         await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), true));
+    } else if (checkFileExtension(fileLocation, "csv")) {
+        // Parse CSV.
+        let str = await readFile(fileLocation, { encoding: "utf-8" });
+        const lines = parseLocaleCsv(str).split("\n");
+        const firstLine = lines.splice(0, 1);
+        shuffleArray(lines);
+        str = [...firstLine, ...lines].join("\n");
+        await writeFile(fileLocation, str);
     }
 }
 

@@ -75,9 +75,8 @@ export async function meltDirectory(realPath, labels) {
         const oldGodotPath = "res://" + oldFilePath.split(rootPath)[1];
         const newGodotPath = "res://" + newFileName;
         filesToChange.push(newFilePath);
+        labels.map(oldGodotPath, newGodotPath);
         newPaths.push([oldFilePath, newFilePath]);
-        labels.list[oldGodotPath] = newGodotPath;
-        labels.list[newGodotPath] = oldGodotPath;
         newGodotPaths.push([oldGodotPath, newGodotPath]);
     }
     // Move files.
