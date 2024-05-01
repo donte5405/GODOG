@@ -149,13 +149,14 @@ export async function huntLabels(sourcePath) {
                         try {
                             let token = tokens[i];
                             if (!isString(token)) continue;
+                            if (ignoredCalls.includes(tokens[i - 2])) continue;
                             token = JSON.parse(formatStringQuote(token));
                             if (!looksLikeStringPath(token)) continue;
                             // If it looks like index access.
                             const strSplitSlash = token.split("/");
                             const strSplitColon = strSplitSlash.splice(strSplitSlash.length - 1)[0].split(":");
                             for (const subToken of [...strSplitSlash, ...strSplitColon ]) {
-                                if (isLabel(subToken) && !ignoredCalls.includes(token[i - 2])) {
+                                if (isLabel(subToken)) {
                                     push(subToken);
                                 } else {
                                     ban(subToken);
