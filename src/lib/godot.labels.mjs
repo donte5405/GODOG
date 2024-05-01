@@ -3,15 +3,13 @@ import { fileList } from "./file.list.mjs";
 import { XMLParser } from "fast-xml-parser";
 import { readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from "url";
 import { checkFileExtension, formatStringQuote, isLabel, isString, looksLikeStringPath } from "./strings.mjs";
 import { tokenise } from "./token.mjs";
 import { existsSync } from "fs";
 
 
-const __filename = fileURLToPath(import.meta.url);
-const godotSourcePath = join(dirname(__filename), "../", "../", "/godot");
-const godotLabelsCachePath = join(godotSourcePath, "godog.json");
+const cachePath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "godot_labels_cache.json");
 const includedDirs = ["core", "doc", "editor", "main", "modules", "platform", "scene", "servers"];
 
 
@@ -110,8 +108,11 @@ function parseXml(targetLabels, str) {
 }
 
 
-/** HUNT DOWN LABELS FROM GODOT'S SOURCE CODE. */
-export async function huntLabels() {
+/**
+ * HUNT DOWN LABELS FROM GODOT'S SOURCE CODE.
+ * @param {string} sourcePath
+ */
+export async function huntLabels(sourcePath) {
     /** @type {string[]} */
     const labels = [ "_" ];
 
@@ -121,9 +122,8 @@ export async function huntLabels() {
     };
 
     // HUNT
-    console.log("")
     for (const includedDir of includedDirs) {
-        for (const filePath of fileList(join(godotSourcePath, includedDir))) {
+        for (const filePath of fileList(join(sourcePath, includedDir))) {
             if (checkFileExtension(filePath, [ "h", "hpp", "c", "cpp", "xml" ])) {
                 console.log("Processing '" + filePath + "'...");
                 const srcStr = await readFile(filePath, { encoding: "utf-8" });
@@ -150,17 +150,32 @@ export async function huntLabels() {
         console.log(`Currently there are ${labels.length} labels in total.`);
     }
 
-    // Save
-    await writeFile(godotLabelsCachePath, JSON.stringify(labels, null, "\t"));
+    return labels;
 }
 
 
-if (!existsSync(godotLabelsCachePath)) {
-    console.log("Godot labels cache not found, trying to generate from './godot/godog.json'...");
-    await huntLabels();
-    console.log("Godot labels cache generation completed and stored in './godot/godog.json'.");
+/**
+ * Load Godot labels from specified directory, fi a
+ * @param {string} sourcePath
+ * @returns {Promise<string[]>}
+ */
+export async function loadGodotLabels(sourcePath = "") {
+    if (!existsSync(cachePath)) {
+        if (!sourcePath) {
+            throw new Error("Godot labels cache file not found.");
+        }
+        if (!existsSync(sourcePath)) {
+            throw new Error("Specified Godot source path is invalid.");
+        }
+        console.log(">>"+sourcePath)
+        const labels = await huntLabels(sourcePath);
+        await writeFile(cachePath, JSON.stringify(labels, null, "\t"));
+        return labels;
+    }
+    try {
+        return JSON.parse(await readFile(cachePath, { encoding: "utf-8" }));
+    } catch (e) {
+        console.error(e);
+        throw new Error("Can't load labels cache from the path'" + cachePath + "'");
+    }
 }
-
-
-/** @type {string[]} All Godot internal labels. */
-export const godotLabels = JSON.parse(await readFile(godotLabelsCachePath, { encoding: "utf-8" }));

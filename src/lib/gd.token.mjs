@@ -1,6 +1,6 @@
 //@ts-check
+import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
-import { godotLabels } from "./godot.labels.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
 import { asciiNumbers, asciiSymbols, formatStringQuote, isString, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
@@ -14,8 +14,8 @@ import { assemble, tokenise } from "./token.mjs";
 // const testPath = join(dirname(__filename), "../", "../", "/TEST");
 
 
-/** @type {string[]} User-defined labels. */
-export const gdscriptUserLabels = [];
+/** List of Godot labels. */
+const godotLabels = await loadGodotLabels();
 
 
 /** Token parser object. */
@@ -106,7 +106,6 @@ export class GDParser {
                         // Define scrambled label.
                         const userLabels = tokenNsp.split(" ").join("").split("#GODOG_LABEL:")[1].split(",");
                         for (const userLabel of userLabels) {
-                            gdscriptUserLabels.push(userLabel);
                             labels.get(userLabel);
                         }
                         // Remove comment.
@@ -162,15 +161,11 @@ export class GDParser {
         }
         if (isTscn) {
             // For GDResource files.
-            if (gdscriptUserLabels.includes(token)) return labels.get(token);
+            if (labels.has(token)) return labels.get(token);
             if (isInStringPathOfTscn) {
                 if (godotLabels.includes(token)) {
                     // Ignore Godot labels.
                     return token;
-                }
-                if (!gdscriptUserLabels.includes(token)) {
-                    // Note it in user labels.
-                    gdscriptUserLabels.push(token);
                 }
                 return labels.get(token);
             }
@@ -199,10 +194,6 @@ export class GDParser {
                 // Replace private token with new token.
                 if (tokens[i - 1] === ".") return token;
                 return newPrivateLabels[token];
-            }
-            if (!gdscriptUserLabels.includes(token)) {
-                // Note it in user labels.
-                gdscriptUserLabels.push(token);
             }
             return labels.get(token);
         }

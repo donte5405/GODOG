@@ -26,30 +26,15 @@ Online games being made with Godot without any of custom toolchains to scramble 
 ### Prerequisites
 Make sure that you have Node.JS 21.6.2 or later.
 
-Clone this project, and download Godot's source code from the repository (can be either from cloning or via ZIP). Don't forget to check if the version you use matches with the version that you're using to develop the game. Also make sure that the source code's directory is named `godot`.
-
-The file sturcture of the GODOG repo directory should be as below:
-
-```
-- gd
-- godot
-- node_modules
-- src
-- .gitignore
-- godog.sh
-- godot.labels.gen.sh
-- package-lock.json
-- package.json
-- README.md
-```
+Clone this project, and clone/download Godot's source code from the Godot repository. Don't forget to check/switch branch if the version you use matches with the version that you're using to develop the game.
 
 Then, run this command:
 
 ```sh
-./godot.labels.gen.sh
+./godot.labels.gen.sh /path/to/the/godot/source/code/directory
 ```
 
-It will start generating possible Godot labels the best effort it can, this need to be run only once.
+It will start generating possible Godot labels the best effort it can, this need to be run only once. You can also delete the Godot source code after this action.
 
 ---
 

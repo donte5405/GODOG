@@ -1,2 +1,2 @@
 #!/bin/bash
-node src/lib/godot.labels.mjs
+node src/labels.gen.mjs $1

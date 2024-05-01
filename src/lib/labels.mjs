@@ -20,6 +20,14 @@ export class Labels {
     }
 
     /**
+     * If specified name exists.
+     * @param {string} name 
+     */
+    has(name) {
+        return this.list[name] ? true : false;
+    }
+
+    /**
      * Get a unique ID by specified name.
      * @param {string} [name] 
      */

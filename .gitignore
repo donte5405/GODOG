@@ -1,3 +1,5 @@
 # Godot source directory.
 godot
 godot/*
+
+godot_labels_cache.json
