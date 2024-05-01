@@ -10,7 +10,8 @@ import { existsSync } from "fs";
 
 
 const cachePath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "godot_labels_cache.json");
-const includedDirs = ["core", "doc", "editor", "main", "modules", "platform", "scene", "servers"];
+const includedDirs = ["core", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: drivers, misc, thirdparty
+const ignoredCalls = [ "TTR", "RTR", "get_icon" ];
 
 
 const parser = new XMLParser({
@@ -28,8 +29,10 @@ function parseXml(targetLabels, str) {
     const labels = [];
 
     const push = (str = "") => {
-        if (labels.includes(str)) return;
-        labels.push(str);
+        for (const name of str.split("/")) {
+            if (labels.includes(name)) continue;
+            labels.push(name);
+        }
     };
 
     const xml = parser.parse(str);
@@ -115,8 +118,17 @@ function parseXml(targetLabels, str) {
 export async function huntLabels(sourcePath) {
     /** @type {string[]} */
     const labels = [ "_" ];
+    /** @type {string[]} */
+    const bannedLabels = [];
+    
+    const ban = (str = "") => {
+        if (bannedLabels.includes(str)) return;
+        labels.splice(labels.indexOf(str));
+        bannedLabels.push(str);
+    };
 
     const push = (str = "") => {
+        if (bannedLabels.includes(str)) return;
         if (labels.includes(str)) return;
         labels.push(str);
     };
@@ -131,8 +143,9 @@ export async function huntLabels(sourcePath) {
                     try { parseXml(labels, srcStr); } catch {}
                 } else if (checkFileExtension(filePath, [ "h", "hpp", "c", "cpp", ])) {
                     const tokens = tokenise(srcStr, "clang");
-                    for (let token of tokens) {
+                    for (let i = 0; i < tokens.length; i++) {
                         try {
+                            let token = tokens[i];
                             if (!isString(token)) continue;
                             token = JSON.parse(formatStringQuote(token));
                             if (!looksLikeStringPath(token)) continue;
@@ -140,7 +153,11 @@ export async function huntLabels(sourcePath) {
                             const strSplitSlash = token.split("/");
                             const strSplitColon = strSplitSlash.splice(strSplitSlash.length - 1)[0].split(":");
                             for (const subToken of [...strSplitSlash, ...strSplitColon ]) {
-                                if (isLabel(subToken)) push(subToken);
+                                if (isLabel(subToken) && !ignoredCalls.includes(token[i - 2])) {
+                                    push(subToken);
+                                } else {
+                                    ban(subToken);
+                                }
                             }
                         } catch {}
                     }
