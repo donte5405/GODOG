@@ -47,7 +47,7 @@ function convertSpaceToTab(str) {
 /**
      * Tokenise GDScript into something able to be processed.
      * @param {string} str 
-	 * @param {"gd"|"clang"|"tscn"} mode
+	 * @param {"gd"|"clang"|"tscn"|"path"} mode
      */
 export function tokenise(str, mode = "gd") {
 	str = convertSpaceToTab(str);
@@ -72,24 +72,21 @@ export function tokenise(str, mode = "gd") {
 						setState("comment");
 						return;
 					}
-					setState("symbol");
 					break;
 				case "#":
 					if (mode == "gd") {
 						setState("comment");
 						return;
 					}
-					setState("symbol");
 					break;
 				case `"`: case `'`:
 					if (str[i + 1] === c && str[i + 2] === c) {
-						i += 2;
 						strThreeQuotes = true;
 						setState("string", 3);
-					} else {
-						setState("string");
+						return;
 					}
-					break;
+					setState("string");
+					return;
 				case "/":
 					if (mode == "clang") {
 						if (c === "/") {
@@ -103,10 +100,11 @@ export function tokenise(str, mode = "gd") {
 							}
 						}
 					}
-					setState("symbol");
 					break;
-				default: setState("symbol"); break;
 			}
+			setState("symbol");
+		} else if (mode == "path" || mode == "tscn") {
+			setState("label_path");
 		} else if (asciiNumbers.includes(c)) {
 			setState("number");
 		} else {
@@ -140,6 +138,12 @@ export function tokenise(str, mode = "gd") {
 				}
 				pushBuffer();
 				return true;
+			case "label_path":
+				if (asciiSymbols.includes(c)) {
+					if (![ ".", "-", "@", "%" ].includes(c)) return false;
+				}
+				pushBuffer();
+				return true;
 			case "label":
 				if (asciiSymbols.includes(c)) {
 					return false;
@@ -170,12 +174,10 @@ export function tokenise(str, mode = "gd") {
 				}
 				if (c === stringSymbol()) {
 					if (strThreeQuotes) {
-						if (!(str[i + 1] === c && str[i + 2] === c)) {
-							throw new Error(`Error parsing at the character index ${i}, incomplete triple string bracket.`);
-						} else {
-							pushBuffer(3);
+						if (str[i + 1] === c && str[i + 2] === c) {
 							strThreeQuotes = false;
-							i += 2;
+							pushBuffer(3);
+							return false;
 						}
 					} else {
 						pushBuffer();
@@ -223,15 +225,11 @@ export function tokenise(str, mode = "gd") {
 
 	const stringSymbol = () => buffer[0];
 
-	// Initnal state decision.
-	if (asciiNumbers.includes(str[0])) {
-		throw new Error("First character in the script can't start with number.");
-	}
-
 	// Process state.
 	while (i < str.length) {
 		entryState();
 	}
+	submitBuffer(); // FIX: the script not picking the last element in the string stream.
 
 	/** @type {string[]} */
 	const postStrs = [];

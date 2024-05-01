@@ -25,24 +25,21 @@ export class GDParser {
     /** @type {Record<string,string>} Newly mapped private labels. */
     newPrivateLabels = {}
 
-    /** Parse result. */
-    result = "";
-
     /**
      * Construct a token parser.
-     * @param {boolean} isTscn
+     * @param {"gd"|"clang"|"tscn"|"path"} mode
      */
-    constructor(isTscn = false) {
-        this.isTscn = isTscn;
+    constructor(mode = "gd") {
+        this.mode = mode;
     }
 
     /**
      * Parse a string and get the result immediately.
      * @param {string} str 
-     * @param {boolean} isTscn 
+     * @param {"gd"|"clang"|"tscn"|"path"} mode
      */
-    static parseStr(str, isTscn = false) {
-        const o = new this(isTscn);
+    static parseStr(str, mode = "gd") {
+        const o = new this(mode);
         // const uuid = randomUUID();
         // const a = o.tokenise(str);
         // writeFileSync(testPath + "/" + uuid + ".a.json", JSON.stringify(a) );
@@ -52,24 +49,32 @@ export class GDParser {
         // writeFileSync(testPath + "/" + uuid + ".c.tscn", c );
         // return c;
         // return o.assemble(o.parseTokens(a));
-        return o.assemble(o.parseTokens(o.tokenise(str)));
+        return o.parse(str);
+    }
+
+    /**
+     * Do a complete parsing procedure in one shot.
+     * @param {string} str 
+     */
+    parse(str, mode = this.mode) {
+        return this.assemble(this.parseTokens(this.tokenise(str, mode), mode));
     }
 
     /**
      * Tokenise GDScript into something able to be processed.
      * @param {string} str 
      */
-    tokenise(str) {
-        return tokenise(str, this.isTscn ? "tscn" : "gd");
+    tokenise(str, mode = this.mode) {
+        return tokenise(str, mode);
     }
 
     /**
      * Parse the token and process it.
      * @param {string[]} tokens 
      */
-    parseTokens(tokens, isInStringPathOfTscn = false) {
+    parseTokens(tokens, mode = this.mode) {
         for (let i = 0; i < tokens.length; i++) {
-            tokens[i] = this.parse(tokens, i, isInStringPathOfTscn);
+            tokens[i] = this.parseToken(tokens, i, mode);
         }
         return tokens;
     }
@@ -78,22 +83,21 @@ export class GDParser {
      * Parse specified token and decide if the specified token should be returned as what.
      * @param {string|string[]} tokens
      * @param {number} i
-     * @param {boolean} isInStringPathOfTscn ONLY USE THIS WHEN IT'S PROCESSED IN TSCN STRINGS!
+     * @returns {string}
      */
-    parse(tokens, i = 0, isInStringPathOfTscn = false) {
+    parseToken(tokens, i = 0, mode = this.mode) {
         if (typeof tokens === "string") {
             tokens = [tokens];
         }
 
         const token = tokens[i];
-        const isTscn = this.isTscn;
         const allPrivateLabels = this.privateLabels;
         const newPrivateLabels = this.newPrivateLabels;
 
         // Process symbols.
         if (asciiSymbols.includes(token[0])) {
             // For GDScript only.
-            if (!isTscn) {
+            if (mode == "gd") {
                 // Remove inferred type casting.
                 if (token === ":=") {
                     return "=";
@@ -130,7 +134,7 @@ export class GDParser {
             // Parse user-defined strings.
             if (isString(token)) {
                 let str = formatStringQuote(token);
-                if (isTscn) {
+                if (mode == "tscn") {
                     str = toStandardJson(str);
                 }
                 str = JSON.parse(str);
@@ -139,14 +143,10 @@ export class GDParser {
                     str = parseTranslations(str);
                 } else if (looksLikeStringPath(str)) {
                     // If it looks like index access.
-                    const strSplitSlash = str.split("/");
-                    const strSplitColon = strSplitSlash.splice(strSplitSlash.length - 1)[0].split(":");
-                    this.parseTokens(strSplitSlash, true);
-                    this.parseTokens(strSplitColon, true);
-                    str = [...strSplitSlash, strSplitColon.join(":")].join("/");
+                    str = this.parse(str, "path");
                 }
                 str = JSON.stringify(str);
-                if (isTscn) {
+                if (mode == "tscn") {
                     str = toGodotJson(str);
                 }
                 return str;
@@ -156,20 +156,23 @@ export class GDParser {
             return token;
         }
         if (asciiNumbers.includes(token[0])) {
-            // NOT numbers.
+            // Ignore labels starting with numbers.
             return token;
         }
-        if (isTscn) {
-            // For GDResource files.
+        if (mode == "path") {
+            // Ignore Godot labels.
+            if (godotLabels.includes(token)) return token;
+            return labels.get(token);
+        }
+        if (mode == "tscn") {
+            // Ignore Godot labels.
+            if (godotLabels.includes(token))  return token;
+            // Only replace known strings.
             if (labels.has(token)) return labels.get(token);
-            if (isInStringPathOfTscn) {
-                if (godotLabels.includes(token)) {
-                    // Ignore Godot labels.
-                    return token;
-                }
-                return labels.get(token);
-            }
-        } else {
+            // Ignore unknown strings.
+            return token;
+        }
+        if (mode == "gd") {
             // For GDScript files
             if (token === "as" && godotLabels.includes(tokens[i + 1])) {
                 // Remove "as" casting.
@@ -187,7 +190,7 @@ export class GDParser {
                     tokens[i - 1] = "";
                     return "";
                 }
-                // NOT godot labels.
+                // Ignore godot labels.
                 return token;
             }
             if (allPrivateLabels.includes(token)) {

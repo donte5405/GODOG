@@ -77,7 +77,7 @@ for (const fileLocation of dirOutFiles) {
         GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }));
     } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Check GDResources.
-        GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), true);
+        GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), "tscn");
     } else if (checkFileExtension(fileLocation, "csv")) {
         // Check CSV.
         parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" }));
@@ -98,7 +98,7 @@ for (const fileLocation of dirOutFiles) {
         await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" })));
     } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Parse GDResources.
-        await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), true));
+        await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), "tscn"));
     } else if (checkFileExtension(fileLocation, "csv")) {
         // Parse CSV.
         let str = await readFile(fileLocation, { encoding: "utf-8" });

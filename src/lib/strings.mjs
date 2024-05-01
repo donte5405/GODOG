@@ -29,7 +29,7 @@ export const allowedNumberSymbols = "0123456789xbe-_.";
 
 
 /** List of ASCII characters allowed in indexed strings. */
-export const allowedIndexedCharacters = "/:.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_";
+export const allowedIndexedCharacters = "/:.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-";
 
 
 /**
