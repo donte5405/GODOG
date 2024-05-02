@@ -65,7 +65,7 @@ export async function meltDirectory(realPath, labels) {
         const fileExtension = pathDotSplit[pathDotSplit.length - 1];
         const newFileName = labels.get() + "." + fileExtension;
         const newFilePath = rootPath + newFileName;
-        if (checkFileExtension(oldFilePath, [ "cfg", "godot" ]) || hasFile("default_env.tres", oldFilePath)) {
+        if (checkFileExtension(oldFilePath, [ "cfg", "godot", "csv" ]) || hasFile("default_env.tres", oldFilePath)) {
             filesToChange.push(oldFilePath);
             continue;
         }
