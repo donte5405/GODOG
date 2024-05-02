@@ -140,6 +140,7 @@ export function toGodotJson(json) {
  * @param {string} str 
  */
 export function looksLikeStringPath(str) {
+    if (!str) return false;
     // Test if it's not protocol path.
     if (str.includes("://")) return false;
     if (str.indexOf("./") === 0) return false;
