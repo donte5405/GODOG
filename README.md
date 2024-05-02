@@ -59,7 +59,7 @@ Then write the file in JSON fashion as usual.
 ```js
 {
     "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
-	"ignoreStringFormattings": false // This tells if GODOG will ignore direct string formattings.
+    "ignoreStringFormattings": false // This tells if GODOG will ignore direct string formattings.
 }
 ```
 
@@ -128,7 +128,7 @@ Automated binary serialisation is completely broken if using this project. While
 
 **If your game uses binary serialisation for game saving, DON'T USE GODOG UNTIL COMPATIBLE UPDATES ROLL OUT.** If possible, don't even use this way of game saving because it introduces buffer overflow attack to the machine.
 
-JSON serialisation generall works with this project unless you write JSON in GDScript like this:
+JSON serialisation generally works with this project unless you write JSON in GDScript like this:
 
 ```gdscript
 {
