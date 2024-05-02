@@ -234,6 +234,11 @@ export class GDParser {
         if (mode == "path") {
             // Ignore Godot labels.
             if (godotLabels.includes(token)) return token;
+            if (allPrivateLabels.includes(token)) {
+                // Replace private token with new token.
+                if (tokens[i - 1] === ":") return labels.get(token);
+                return newPrivateLabels[token];
+            }
             return labels.get(token);
         }
         if (mode == "tscn") {
@@ -252,7 +257,7 @@ export class GDParser {
             }
             if (allPrivateLabels.includes(token)) {
                 // Replace private token with new token.
-                if (tokens[i - 1] === ".") return token;
+                if (tokens[i - 1] === ".") return labels.get(token);
                 return newPrivateLabels[token];
             }
             if (gdscriptUserTypes.includes(token)) {
