@@ -96,7 +96,7 @@ json["_ab"]
 ```
 
 #### 2. Private Field Mangler
-This GDScript macro indentifies any labels that the user want it to be private fields, this helpa complicating source restoration even more, but also introduces a phenomenon where it causes errors if the field is accessed outside of a script file.
+This GDScript macro indentifies any labels that the user want it to be private fields, this help complicating source restoration even more, but also introduces a phenomenon where it causes errors if the field is accessed outside of a script file.
 
 ```gdscript
 #GODOG_PRIVATE:_velocity
