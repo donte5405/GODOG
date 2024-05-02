@@ -1,5 +1,5 @@
 //@ts-check
-import { GDParser } from "./gd.token.mjs";
+import { GDParser } from "./parser.mjs";
 import { formatStringQuote, isString } from "./strings.mjs";
 
 

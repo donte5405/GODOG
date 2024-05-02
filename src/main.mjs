@@ -5,7 +5,7 @@ import { join, resolve } from "path";
 import { dirList, fileList } from "./lib/file.list.mjs";
 import { labels } from "./lib/labels.mjs";
 import { shuffleArray } from "./lib/shuffle.mjs";
-import { GDParser, parserSetConfig } from "./lib/gd.token.mjs";
+import { GDParser, parserSetConfig } from "./lib/parser.mjs";
 import { checkFileExtension } from "./lib/strings.mjs";
 import { loadConfig } from "./lib/options.mjs";
 import { meltDirectory } from "./melt.mjs";
