@@ -1,6 +1,8 @@
 #  GODOG
 Because not all Godot projects should be (physically) open source! That's just unacceptable!
 
+![Godot Engine Logo Copyright (c) 2017 Andrea Calabró. Altered to resemble dog's look. This work is licensed under the Creative Commons Attribution 4.0 International](https://github.com/donte5405/Godog/assets/134863321/9aeabe59-f11f-4e11-898d-a13ea7c0142c)
+
 ---
 
 ## Still Not Ready For Production!
