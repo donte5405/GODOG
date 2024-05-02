@@ -238,6 +238,27 @@ Unlike Godot's translation function, this translation function works differently
 
 ---
 
+### TIP: Using Translation Files To Store File Paths
+In case if in-game resoruces are content-rich and dynimically loaded (common in GaaS), you can also take one more step forward to hide resource paths (like images, text descriptions, and scripts), making it more difficult to trace back resources and where it gets mapped into. Due to its side effect that's primarily used for optimisation, when the CSV paths get converted into `.translation`, the translation keys will get converted into some form of optimised binary and lose the key context it has, along with a cherry on the top by it being a binary format, completely invalidate common string lookup software (notably the `Find in files` functionality in text editor software). Things left is to not forget to use the `tr()` function every time you want to use those strings properly.
+
+You only need one key with the main supported language as its key.
+
+Here's a CSV example of how this will work:
+```js
+"keys","en"
+"UrlDebug","http://localhost:8060"
+"UrlProduction","https://sea.men:9042"
+"PathDefaultCharacterIcon","res://icon.png"
+```
+
+To use it:
+```gdscript
+var _res = http.request(tr("UrlDebug") if OS.is_debug_build() else tr("UrlProduction"), [], true, HTTPClient.METHOD_POST, RequestBodyStream)
+_trCharacterIcon.texture = load(tr("PathDefaultCharacterIcon"))
+```
+
+---
+
 ### TIP: Using "Wrong" GDScript Name Styles
 Because following style guides in GDScript increases risks of user labels hitting Godot internal labels, making this tool less effective. To help on this, using "these" style guides will help GODOG identifying user labels a lot easier.
 
