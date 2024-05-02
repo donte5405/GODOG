@@ -63,6 +63,7 @@ export function hasFile(filename, path) {
  * @param {string} str 
  */
 export function isString(str) {
+    if (!str) return "";
     const sym = str[0];
     switch (sym) {
         case `"`: case "'":
@@ -109,6 +110,7 @@ export function isNumber(str) {
  * @param {string} str 
  */
 export function formatStringQuote(str) {
+    if (!str) return "";
     if (str[0] === "'" && str[str.length - 1] === "'") {
         return `"${str.substring(1, str.length - 2)}"`;
     }
