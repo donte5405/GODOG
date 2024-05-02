@@ -144,6 +144,7 @@ export async function huntLabels(sourcePath) {
                 if (checkFileExtension(filePath, "xml")) {
                     try { parseXml(xmlLabels, srcStr); } catch {}
                 } else if (checkFileExtension(filePath, [ "h", "hpp", "c", "cpp", ])) {
+                    if (checkFileExtension(filePath, "gen.h")) continue; // Ignore generated files.
                     const tokens = tokenise(srcStr, "clang");
                     for (let i = 0; i < tokens.length; i++) {
                         try {
