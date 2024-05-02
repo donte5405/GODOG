@@ -226,7 +226,7 @@ _*_*_*_
 _*_*_*_
 ```
 
-The way it stores data is pretty similar to JSON, just replace `{` and `}` with `_*_*_*_` instead. In the debugging environment, the translation will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many of supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored on a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
+The way it stores data is pretty similar to JSON, just replace `{` and `}` with `_*_*_*_` instead. In the debugging environment, the translation will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many of supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored in a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
 
 To translate strings using this functionality, use `Tr.dsk()` function from `translator.gd` (stored in `gd` directory of this repo):
 
