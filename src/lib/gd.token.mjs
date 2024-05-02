@@ -1,4 +1,6 @@
 //@ts-check
+import { readFile } from "fs/promises";
+import { Configuration } from "./options.mjs";
 import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
@@ -18,12 +20,27 @@ import { assemble, tokenise } from "./token.mjs";
 const godotLabels = await loadGodotLabels();
 
 
+/** @type {Configuration?} Configuration that will be used. */
+let config;
+
+
+/**
+ * Set configuration blob for this parser module.
+ * @param {Configuration} c 
+ */
+export function parserSetConfig(c) {
+    config = c;
+}
+
+
 /** Token parser object. */
 export class GDParser {
     /** @type {string[]} Private labels. */
     privateLabels = [];
     /** @type {Record<string,string>} Newly mapped private labels. */
     newPrivateLabels = {}
+    /** Filename that the parser is handling. Does nothing except warning users. */
+    fileName = "";
 
     /**
      * Construct a token parser.
@@ -31,6 +48,15 @@ export class GDParser {
      */
     constructor(mode = "gd") {
         this.mode = mode;
+    }
+
+    /**
+     * Parse a file and get the result immediately.
+     * @param {string} fileName
+     * @param {"gd"|"clang"|"tscn"|"path"} mode
+     */
+    static async parseFile(fileName, mode = "gd") {
+        return new this(mode).tellFileName(fileName).parse(await readFile(fileName, { encoding: "utf-8" }));
     }
 
     /**
@@ -50,6 +76,15 @@ export class GDParser {
         // return c;
         // return o.assemble(o.parseTokens(a));
         return o.parse(str);
+    }
+
+    /**
+     * Tell file name that this parser is handling.
+     * @param {string} name 
+     */
+    tellFileName(name) {
+        this.fileName = name;
+        return this;
     }
 
     /**
@@ -133,6 +168,13 @@ export class GDParser {
 
             // Parse user-defined strings.
             if (isString(token)) {
+                if (tokens[i + 1] === "%") {
+                    if (config) {
+                        if (!config.ignoreStringFormattings) {
+                            throw new Error(`[${this.fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game that only supports English.`);
+                        }
+                    }
+                }
                 let str = formatStringQuote(token);
                 if (mode == "tscn") {
                     str = toStandardJson(str);

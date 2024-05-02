@@ -52,15 +52,21 @@ This will generate a new Godot project from `/path/to/your/project` into `/path/
 ---
 
 ### GODOG Configuration
-At the current moment, GODOG only supports one additional option. Simply add it into the `godog.json` file.
+There are few configurations that GODOG offer to fine-tune its behaviour. The configuration file be stored in the project on the first run, or simply create a file named `godog.json` in the project's root directory.
+
+Then write the file in JSON fashion as usual.
+
 ```js
 {
     "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
+	"ignoreStringFormattings": false // This tells if GODOG will ignore direct string formattings.
 }
 ```
 
 - `scrambleGodotFiles`: `boolean`
 Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the project's root directory.
+- `ignoreStringFormattings`: `boolean`
+Tells if GODOG will ignore direct string formattings. **This should always have been disabled unless you absolutely know what you're doing.**
 
 ---
 
@@ -307,7 +313,7 @@ func Start() -> void:
 - Built-in scripts are NOT supported (may implement it later).
 - Options to ignore some crucial strings are not implemented yet.
 - **Resource mapping with string formatting will not work!**
-	(Example: `"res://scn/scn_game_%d.tscn" % index`)
+	(Example: `"res://scn/scn_game_%d.tscn" % index`, `"Path/To/My/Node%d" % index`)
 - **It loves destroying GUI strings. To avoid the issue, store readable strings in translation files instead.**
 
 ---

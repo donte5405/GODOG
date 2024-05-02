@@ -5,12 +5,14 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 
 
-class Configuration {
+export class Configuration {
     /** @type {Record<string,string>} */
     data = {};
 
     /** If project melt enabled. */
     get meltEnabled() { return this.data["scrambleGodotFiles"] ? true : false; }
+    /** If this is configured to ignore string formattings. */
+    get ignoreStringFormattings() { return this.data["ignoreStringFormattings"] ? true : false; }
 
     constructor(o) {
         if (o) this.data = o;

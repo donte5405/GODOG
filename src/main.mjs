@@ -5,7 +5,7 @@ import { join, resolve } from "path";
 import { dirList, fileList } from "./lib/file.list.mjs";
 import { labels } from "./lib/labels.mjs";
 import { shuffleArray } from "./lib/shuffle.mjs";
-import { GDParser } from "./lib/gd.token.mjs";
+import { GDParser, parserSetConfig } from "./lib/gd.token.mjs";
 import { checkFileExtension } from "./lib/strings.mjs";
 import { loadConfig } from "./lib/options.mjs";
 import { meltDirectory } from "./melt.mjs";
@@ -35,6 +35,7 @@ if (!existsSync(dirOutLocation)) {
 // Get project config.
 console.log("Loading project config...");
 const config = await loadConfig(dirLocation);
+parserSetConfig(config);
 
 
 // Get all Godot labels.
@@ -74,10 +75,10 @@ console.log("ANALysing the entire project...");
 for (const fileLocation of dirOutFiles) {
     if (checkFileExtension(fileLocation, "gd")) {
         // Check GDScripts.
-        GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }));
+        await GDParser.parseFile(fileLocation);
     } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Check GDResources.
-        GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), "tscn");
+        await GDParser.parseFile(fileLocation, "tscn");
     } else if (checkFileExtension(fileLocation, "csv")) {
         // Check CSV.
         parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" }));
@@ -95,10 +96,10 @@ console.log("Screwing entire project...");
 for (const fileLocation of dirOutFiles) {
     if (checkFileExtension(fileLocation, "gd")) {
         // Parse GDScript.
-        await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" })));
+        await writeFile(fileLocation, await GDParser.parseFile(fileLocation));
     } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Parse GDResources.
-        await writeFile(fileLocation, GDParser.parseStr(await readFile(fileLocation, { encoding: "utf-8" }), "tscn"));
+        await writeFile(fileLocation, await GDParser.parseFile(fileLocation, "tscn"));
     } else if (checkFileExtension(fileLocation, "csv")) {
         // Parse CSV.
         let str = await readFile(fileLocation, { encoding: "utf-8" });
@@ -130,3 +131,7 @@ await writeFile(join(dirLocation, "/dbg.sym.json"), labels.exportDebugSymbols())
 
 // Indicate when it's done.
 console.log("Done!");
+console.warn(
+    "If you're working with a Godot game that doesn't utilise string translation tables (CSV), majority of strings will be altered and become nonsense." +
+    "This isn't a bug since Godot always mangle everything with strings and there's no way to alternate source code safely. Read 'README.DOC' for more details."
+);
