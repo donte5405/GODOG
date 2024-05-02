@@ -115,7 +115,7 @@ First and foremost, Unless it's absolutely intentional for reasons (see below), 
 "this-is-my-string" # WRONG, GODOG CAN'T DETECT KEBAB CASE LABELS!
 ```
 
-On the text display issue, simply workaround it by adding extra characters into strings in order to prevent it from being manipulated, for example, empty space (space bar). Using Godot translation functionality also helps avoiding this issue.
+On the text display issue, simply workaround it by adding extra characters into strings in order to prevent it from being manipulated, for example, empty space (space bar). **Using Godot translation functionality also helps avoiding this issue.**
 
 ```js
 "sometext" -> " sometext " // space added on both ends.
