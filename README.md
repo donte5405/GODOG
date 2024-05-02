@@ -147,7 +147,7 @@ JSON serialisation generally works with GODOG, unless you write JSON in GDScript
 json.player_info.name
 ```
 
-As you may already noticed, this exposes user-defined strings directly into GDScript source code, and GODOG will note them as user-defined labels and WILL SCRAMBLE THEM. This means that the game's save will only remain compatible for only one version of Godot, and render API calls completely impossible since string names are altered. Fortunately, there are ways to workaround this issue. By converting the syntax to JSON-like will workaround this issue. Adding special characters to the string names will also help. Considering the snippet above, converting it gives this result instead:
+As you may already noticed, this exposes user-defined strings directly into GDScript source code, and GODOG will note them as user-defined labels and WILL SCRAMBLE THEM. This means that the game's save will only remain compatible for only one version of your game, and render API calls completely impossible since string names are altered. Fortunately, there are ways to workaround this issue. By converting the syntax to JSON-like will workaround this issue. Adding special characters to the string names will also help. Considering the snippet above, converting it gives this result instead:
 
 ```gdscript
 var json := {
