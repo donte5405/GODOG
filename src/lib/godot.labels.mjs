@@ -4,7 +4,7 @@ import { XMLParser } from "fast-xml-parser";
 import { readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { checkFileExtension, formatStringQuote, isLabel, isString, looksLikeStringPath } from "./strings.mjs";
+import { checkFileExtension, formatStringQuote, isLabel, isNumber, isString, looksLikeStringPath } from "./strings.mjs";
 import { tokenise } from "./token.mjs";
 import { existsSync } from "fs";
 
@@ -20,6 +20,10 @@ const parser = new XMLParser({
 });
 
 
+/** @param {string} str */
+function checkLabel(str) { return !isNumber(str) && isLabel(str); }
+
+
 /**
  * @param {string[]} targetLabels
  * @param {string} str 
@@ -31,7 +35,7 @@ function parseXml(targetLabels, str) {
     const push = (str = "") => {
         for (const name of str.split("/")) {
             if (labels.includes(name)) continue;
-            labels.push(name);
+            if (checkLabel(name))labels.push(name);
         }
     };
 
@@ -118,21 +122,21 @@ function parseXml(targetLabels, str) {
 export async function huntLabels(sourcePath) {
     /** @type {string[]} */
     const xmlLabels = [];
-    /** @type {string[]} */
-    const labels = [];
-    /** @type {string[]} */
-    const bannedLabels = [];
+    /** @type {Record<string,boolean>} */
+    const labels = {};
+    /** @type {Record<string,boolean>} */
+    let bannedLabels = {};
     
     const ban = (str = "") => {
-        if (bannedLabels.includes(str)) return;
-        labels.splice(labels.indexOf(str));
-        bannedLabels.push(str);
+        if (bannedLabels[str]) return;
+        bannedLabels[str] = true;
+        delete labels[str];
     };
 
     const push = (str = "") => {
-        if (bannedLabels.includes(str)) return;
-        if (labels.includes(str)) return;
-        labels.push(str);
+        if (bannedLabels[str]) return;
+        if (labels[str]) return;
+        labels[str] = true;
     };
 
     // HUNT
@@ -147,39 +151,42 @@ export async function huntLabels(sourcePath) {
                     if (checkFileExtension(filePath, "gen.h")) continue; // Ignore generated files.
                     const tokens = tokenise(srcStr, "clang");
                     for (let i = 0; i < tokens.length; i++) {
+                        let dontBan = true;
+                        let token = tokens[i];
+                        if (!isString(token)) continue;
+                        if (ignoredCalls.includes(tokens[i - 2])) {
+                            dontBan = false;
+                        }
                         try {
-                            let token = tokens[i];
-                            if (!isString(token)) continue;
-                            if (ignoredCalls.includes(tokens[i - 2])) continue;
                             token = JSON.parse(formatStringQuote(token));
-                            if (!looksLikeStringPath(token)) continue;
-                            // If it looks like index access.
-                            const strSplitSlash = token.split("/");
-                            const strSplitColon = strSplitSlash.splice(strSplitSlash.length - 1)[0].split(":");
-                            for (const subToken of [...strSplitSlash, ...strSplitColon ]) {
-                                if (isLabel(subToken)) {
-                                    push(subToken);
-                                } else {
-                                    ban(subToken);
-                                }
+                        } catch {
+                            continue;
+                        }
+                        if (!looksLikeStringPath(token)) continue;
+                        for (const subToken of tokenise(token, "path")) {
+                            if (checkLabel(subToken) && dontBan) {
+                                push(subToken);
+                            } else {
+                                ban(subToken);
                             }
-                        } catch {}
+                        }
                     }
                 }
             }
         }
-        console.log(`Currently there are ${labels.length} labels in total.`);
+        console.log(`Currently there are ${Object.keys(labels).length} labels in total.`);
     }
 
     // Always include XML labels.
-    bannedLabels.length = 0;
+    bannedLabels = {};
     for (const name of xmlLabels) {
         push(name);
     }
 
     push("_"); // FIX: Default case not being included.
-    console.log(`There are ${labels.length} labels in total.`);
-    return labels;
+    const labelsKeys = Object.keys(labels);
+    console.log(`There are ${labelsKeys.length} labels in total.`);
+    return labelsKeys;
 }
 
 

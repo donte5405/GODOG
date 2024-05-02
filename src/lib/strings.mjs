@@ -90,6 +90,18 @@ export function isLabel(str) {
 
 
 /**
+ * If specified string is a number
+ * @param {string} str 
+ */
+export function isNumber(str) {
+    for (let i = 0; i < str.length; i++) {
+        if (!allowedNumberSymbols.includes(str[i])) return false;
+    }
+    return true;
+}
+
+
+/**
  * Change the string quote from `'` to `"`.
  * @param {string} str 
  */
