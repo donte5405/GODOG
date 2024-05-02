@@ -84,6 +84,7 @@ export function isString(str) {
  */
 export function isLabel(str) {
     if (!str) return false;
+    if (isNumber(str)) return false;
     for (let i = 0; i < str.length; i++) {
         if (asciiSymbols.includes(str[i])) return false;
     }
@@ -99,7 +100,19 @@ export function isNumber(str) {
     if (!str) return false;
     if (!asciiNumbers.includes(str[0])) return false;
     if (str[0] === "0" && str[1]) {
-        if (!["x","b"].includes(str[1])) return false;
+        if (str.length < 3) return false;
+        switch (str[1]) {
+            case "b":
+                for (let i = 2; i < str.length; i++) {
+                    if (!("01").includes(str[i])) return false;
+                }
+                return true;
+            case "x":
+                for (let i = 2; i < str.length; i++) {
+                    if (!("0123456789abcdefABCDEF").includes(str[i])) return false;
+                }
+                return true;
+        }
     }
     for (let i = 0; i < str.length; i++) {
         if (!allowedNumberSymbols.includes(str[i])) return false;

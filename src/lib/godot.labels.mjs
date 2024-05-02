@@ -20,10 +20,6 @@ const parser = new XMLParser({
 });
 
 
-/** @param {string} str */
-function checkLabel(str) { return !isNumber(str) && isLabel(str); }
-
-
 /**
  * @param {string[]} labels
  * @param {string} str 
@@ -32,7 +28,7 @@ function parseXml(labels, str) {
     const push = (str = "") => {
         for (const name of str.split("/")) {
             if (labels.includes(name)) continue;
-            if (checkLabel(name))labels.push(name);
+            if (isLabel(name)) labels.push(name);
         }
     };
 
@@ -151,7 +147,7 @@ export async function huntLabels(sourcePath) {
                         }
                         if (!looksLikeStringPath(token)) continue;
                         for (const subToken of tokenise(token, "path")) {
-                            if (checkLabel(subToken) && dontBan) {
+                            if (isLabel(subToken) && dontBan) {
                                 push(subToken);
                             } else {
                                 ban(subToken);
