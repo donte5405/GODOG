@@ -16,6 +16,10 @@ import { assemble, tokenise } from "./token.mjs";
 // const testPath = join(dirname(__filename), "../", "../", "/TEST");
 
 
+/** @type {string[]} User-defined GDScript types. */
+const gdscriptUserTypes = [];
+
+
 /** List of Godot labels. */
 const godotLabels = await loadGodotLabels();
 
@@ -30,6 +34,32 @@ let config;
  */
 export function parserSetConfig(c) {
     config = c;
+}
+
+
+/**
+ * @param {string} token
+ * @param {string[]} tokens 
+ * @param {number} i 
+ */
+function removeTypeCasting(token, tokens, i) {
+    if (tokens[i - 1] === ":" && [ "=", ",", ")" ].includes(tokens[i + 1])) {
+        // Remove explicit type casting.
+        tokens[i - 1] = "";
+        return "";
+    }
+    if (tokens[i - 2] === ")" && tokens[i - 1] === "->" && tokens[i + 1] === ":") {
+        // Remove arrow token (return type).
+        tokens[i - 1] = "";
+        return "";
+    }
+    if (tokens[i - 1] === "as") {
+        // Remove "as" casting.
+        tokens[i - 1] = "";
+        return "";
+    }
+    // Ignore godot labels.
+    return token;
 }
 
 
@@ -216,29 +246,24 @@ export class GDParser {
         }
         if (mode == "gd") {
             // For GDScript files
-            if (token === "as" && godotLabels.includes(tokens[i + 1])) {
-                // Remove "as" casting.
-                tokens[i + 1] = "";
-                return "";
-            }
             if (godotLabels.includes(token)) {
-                if (tokens[i - 3] === "var" && tokens[i - 1] === ":" && tokens[i + 1] === "=") {
-                    // Remove explicit type casting.
-                    tokens[i - 1] = "";
-                    return "";
-                }
-                if (tokens[i - 2] === ")" && tokens[i - 1] === "->" && tokens[i + 1] === ":") {
-                    // Remove arrow token (return type).
-                    tokens[i - 1] = "";
-                    return "";
-                }
-                // Ignore godot labels.
-                return token;
+                // Try to get rid of type casting if possible.
+                return removeTypeCasting(token, tokens, i);
             }
             if (allPrivateLabels.includes(token)) {
                 // Replace private token with new token.
                 if (tokens[i - 1] === ".") return token;
                 return newPrivateLabels[token];
+            }
+            if (gdscriptUserTypes.includes(token)) {
+                // Remove user type casting.
+                return removeTypeCasting(labels.get(token), tokens, i);
+            }
+            if (tokens[i - 1] === "class_name") {
+                // Note User types.
+                if (!gdscriptUserTypes.includes(token)) {
+                    gdscriptUserTypes.push(token);
+                }
             }
             return labels.get(token);
         }
