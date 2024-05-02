@@ -82,6 +82,7 @@ export function isString(str) {
  * @param {string} str 
  */
 export function isLabel(str) {
+    if (!str) return false;
     for (let i = 0; i < str.length; i++) {
         if (asciiSymbols.includes(str[i])) return false;
     }
@@ -94,6 +95,8 @@ export function isLabel(str) {
  * @param {string} str 
  */
 export function isNumber(str) {
+    if (!str) return false;
+    if (!asciiNumbers.includes(str[0])) return false;
     for (let i = 0; i < str.length; i++) {
         if (!allowedNumberSymbols.includes(str[i])) return false;
     }

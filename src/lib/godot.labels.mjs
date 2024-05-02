@@ -25,13 +25,10 @@ function checkLabel(str) { return !isNumber(str) && isLabel(str); }
 
 
 /**
- * @param {string[]} targetLabels
+ * @param {string[]} labels
  * @param {string} str 
  */
-function parseXml(targetLabels, str) {
-    /** @type {string[]} */
-    const labels = [];
-
+function parseXml(labels, str) {
     const push = (str = "") => {
         for (const name of str.split("/")) {
             if (labels.includes(name)) continue;
@@ -101,16 +98,6 @@ function parseXml(targetLabels, str) {
                 push(themeItem["@type"]);
             }
         }
-    }
-
-    const pushToTarget = (str = "") => {
-        if (targetLabels.includes(str)) return;
-        targetLabels.push(str);
-    }
-
-    // Final.
-    for (const label of labels) {
-        pushToTarget(label);
     }
 }
 
