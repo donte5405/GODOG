@@ -126,7 +126,7 @@ Loading and saving has always been a hurdle for game developers especially on ho
 
 Automated binary serialisation is completely broken if using this project. While it's not apparent on the first but the side effect will be apparent on the next export revisions because string entries get swapped. This is not an issue in the past with games that run in machine code because most of them involve manual binary serialisation.
 
-**If your game uses binary serialisation for game saving, DON'T USE GODOG UNTIL COMPATIBLE UPDATES ROLL OUT.** If possible, don't even use this way of game saving because it introduces buffer overflow attack to the machine.
+**If your game uses binary serialisation for game saving, DON'T USE GODOG OR IT'LL CORRUPT YOUR SAVE FILES EVERY TIME YOUR GAME UPDATES.** If possible, don't even use this way of game saving because it introduces buffer overflow attack to the machine.
 
 JSON serialisation generally works with this project unless you write JSON in GDScript like this:
 
