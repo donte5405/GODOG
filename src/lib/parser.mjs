@@ -43,7 +43,7 @@ export function parserSetConfig(c) {
  * @param {number} i 
  */
 function removeTypeCasting(token, tokens, i) {
-    if (tokens[i - 1] === ":" && [ "=", ",", ")" ].includes(tokens[i + 1])) {
+    if (tokens[i - 1] === ":" && [ "=", ",", ")", "\n" ].includes(tokens[i + 1])) {
         // Remove explicit type casting.
         tokens[i - 1] = "";
         return "";
