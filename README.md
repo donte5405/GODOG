@@ -236,7 +236,7 @@ To translate strings using this functionality, use `Tr.dsk()` function from `tra
 Tr.dsk(resource_object.text_hello)
 ```
 
-Unlike Godot's translation function, this translation function works differently from Godot's translation since it involves no unique key. Which means the style of `Tr.dsk("greeting")` will not work with this function. It's on this design since it's intended to handle large strings in resource files.
+Unlike Godot's translation function, this translation function works differently since it involves no unique key. Which means the style of `Tr.dsk("greeting")` will not work with this function. It's on this design since it's intended to handle large strings in resource files.
 
 ---
 
