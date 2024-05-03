@@ -32,7 +32,7 @@ export function parseTranslations(str) {
         const json = JSON.parse(`{${lines[i]}}`);
         const strid = randomUUID().split("-").join("");
         for (const lang of Object.keys(json)) {
-            translations[md5(lang + "_" + strid)] = json[lang];
+            translations[json[lang]] = md5(lang + "_" + strid);
         }
         lines[i] = strid;
     }

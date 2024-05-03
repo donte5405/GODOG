@@ -113,8 +113,8 @@ for (const fileLocation of dirOutFiles) {
 
 
 // Port translations.
-for (const key of Object.keys(translations)) {
-    await writeFile(join(translationLocation, key + ".txt"), translations[key]);
+for (const translated of Object.keys(translations)) {
+    await writeFile(join(translationLocation, translations[translated] + ".txt"), translated);
 }
 
 
