@@ -11,7 +11,7 @@ import { existsSync } from "fs";
 
 const cachePath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "godot_labels_cache.json");
 const includedDirs = ["core", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: drivers, misc, thirdparty
-const ignoredCalls = [ "TTR", "RTR", "get_icon" ];
+const ignoredCalls = [ "TTR", "RTR", "get_icon", "plus_file" ];
 
 
 const parser = new XMLParser({
