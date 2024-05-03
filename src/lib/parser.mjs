@@ -44,6 +44,7 @@ export function parserSetConfig(c) {
  */
 function removeTypeCasting(token, tokens, i) {
     if (tokens[i - 1] === ":" && [ "=", ",", ")", "\n" ].includes(tokens[i + 1])) {
+        if (tokens[i - 3] == "export") return token; // Export types without manual inferring must have this.
         // Remove explicit type casting.
         tokens[i - 1] = "";
         return "";
@@ -165,6 +166,7 @@ export class GDParser {
             if (mode == "gd") {
                 // Remove inferred type casting.
                 if (token === ":=") {
+                    if (tokens[i - 3] === "export") return token; // Export types without manual inferring must have this.
                     return "=";
                 }
                 // Parse comment.
