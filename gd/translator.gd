@@ -4,7 +4,7 @@ class_name Tr
 #GODOG_PRIVATE: _key, _json, _file, _str, _path
 
 
-const TR_QUOTE = "_*_*_*_"
+const TR_QUOTE = "_" + "*" + "_" + "*" + "_" + "*" + "_"
 
 
 static func dsk(_key: String) -> String:
