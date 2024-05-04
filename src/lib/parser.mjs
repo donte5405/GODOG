@@ -4,7 +4,7 @@ import { Configuration } from "./options.mjs";
 import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
-import { asciiNumbers, asciiSymbols, formatStringQuote, isString, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
+import { asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
@@ -259,7 +259,13 @@ export class GDParser {
                     str = parseTranslations(str);
                 } else if (looksLikeStringPath(str)) {
                     // If it looks like index access.
-                    str = this.parse(str, "path");
+                    if (isLabel(str) && this.privateLabels[str]) {
+                        // If it's single label, allow private labels.
+                        str = this.privateLabels[str];
+                    } else {
+                        // If it seems to be a NodePath or others.
+                        str = this.parse(str, "path");
+                    }
                 }
                 str = JSON.stringify(str);
                 if (mode == "tscn") {
@@ -312,8 +318,16 @@ export class GDParser {
                         }
                     }
                 }
+                if (token === "class_name") {
+                    // Note User types.
+                    const className = tokens[i + 1];
+                    if (!gdscriptUserTypes.includes(className)) {
+                        gdscriptUserTypes.push(className);
+                    }
+                    return token;
+                }
                 if (token === "func") {
-                    // Noting private labels from functions.
+                    // Note private labels from functions.
                     let bracketStack = 1;
                     for (i++; i < tokens.length; i++) {
                         if (tokens[i] === "(") break;
@@ -352,12 +366,6 @@ export class GDParser {
             if (gdscriptUserTypes.includes(token)) {
                 // Remove user type casting.
                 return removeTypeCasting(labels.get(token), tokens, i);
-            }
-            if (tokens[i - 1] === "class_name") {
-                // Note User types.
-                if (!gdscriptUserTypes.includes(token)) {
-                    gdscriptUserTypes.push(token);
-                }
             }
             return labels.get(token);
         }
