@@ -44,7 +44,15 @@ export function parserSetConfig(c) {
  */
 function removeTypeCasting(token, tokens, i) {
     if (tokens[i - 1] === ":" && [ "=", ",", ")", "\n" ].includes(tokens[i + 1])) {
-        if (tokens[i - 4] == "export") return token; // Export types without manual inferring must have this.
+        let bracesStack = 0;
+        for (let ii = i - 4; ii > 0; ii--) {
+            // Export types without manual inferring still need type casting.
+            if (tokens[ii] === ")") bracesStack ++;
+            if (tokens[ii] === "(") bracesStack --;
+            if (bracesStack) continue;
+            if (tokens[ii] === "export") return token; 
+            if (tokens[ii] === "\n") break;
+        }
         // Remove explicit type casting.
         tokens[i - 1] = "";
         return "";
