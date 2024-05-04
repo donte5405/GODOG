@@ -29,6 +29,32 @@ let config;
 
 
 /**
+ * Find current line amount of indents.
+ * @param {string[]} tokens 
+ * @param {number} i 
+ */
+function countIndents(tokens, i) {
+    let count = 0;
+    for (i -= 1; i >= 0; i--) {
+        if (tokens[i] === "\n") break;
+        if (tokens[i] !== "\t") continue;
+        count++;
+    }
+    return count;
+}
+
+
+/**
+ * If specified token has Indentation at its front.
+ * @param {string[]} tokens 
+ * @param {number} i 
+ */
+function hasIndentAtItsFront(tokens, i) {
+    return [ "\t", "\n" ].includes(tokens[i - 1]);
+}
+
+
+/**
  * Set configuration blob for this parser module.
  * @param {Configuration} c 
  */
@@ -74,6 +100,8 @@ function removeTypeCasting(token, tokens, i) {
 
 /** Token parser object. */
 export class GDParser {
+    /** For detecting local vars in the scoped (inner) class indentation. */
+    currentClassIndent = 0;
     /** @type {Record<string,string>} Private labels. */
     privateLabels = {};
     /** Filename that the parser is handling. Does nothing except warning users. */
@@ -263,16 +291,35 @@ export class GDParser {
         if (mode == "gd") {
             // For GDScript files
             if (godotLabels.includes(token)) {
+                if (token === "class") {
+                    // Set current (inner) class indentation depth.
+                    for (i++; i < tokens.length; i++) {
+                        // Find a new line.
+                        if (tokens[i] === "\n") break;
+                    }
+                    for (i++; i < tokens.length; i++) {
+                        // Find the entry of the first token behind indents.
+                        if (tokens[i] !== "\t") break;
+                    }
+                    this.currentClassIndent = countIndents(tokens, i);
+                    return token;
+                } else if ([ "extends", "class_name", "var", "const", "enum", "signal", "func" ].includes(token)) {
+                    // Calibrate current (inner) class indentation if it falls into lower indentation.
+                    if (hasIndentAtItsFront(tokens, i)) {// In case of Godot 4, because it has lambda.
+                        const myIndent = countIndents(tokens, i);
+                        if (myIndent < this.currentClassIndent) {
+                            this.currentClassIndent = myIndent;
+                        }
+                    }
+                }
                 if (token === "func") {
                     // Noting private labels from functions.
-                    let ii = i + 1;
-                    for (; ii < tokens.length; ii++) {
-                        // Just in case for Godot 4.x
-                        if (tokens[ii] === "(") break;
-                    }
                     let bracketStack = 1;
-                    for (ii += 1; ii < tokens.length; ii++) {
-                        const bToken = tokens[ii];
+                    for (i++; i < tokens.length; i++) {
+                        if (tokens[i] === "(") break;
+                    }
+                    for (i++; i < tokens.length; i++) {
+                        const bToken = tokens[i];
                         if (bToken === "(") {
                             bracketStack ++;
                             continue;
@@ -282,18 +329,20 @@ export class GDParser {
                             if (!bracketStack) break;
                             continue;
                         }
-                        if ([",", "("].includes(tokens[ii - 1])) {
-                            this._getOrAddPrivateLabel(tokens[ii]);
+                        if ([",", "("].includes(tokens[i - 1])) {
+                            this._getOrAddPrivateLabel(tokens[i]);
                         }
                     }
                     return token;
                 }
+                if (token === "var") {
+                    // Note private labels created by local `var` constructors.
+                    if (this.currentClassIndent === countIndents(tokens, i)) return token;
+                    this._getOrAddPrivateLabel(tokens[i + 1]);
+                    return token;
+                }
                 // Try to get rid of type casting if possible.
                 return removeTypeCasting(token, tokens, i);
-            }
-            if (tokens[i - 1] === "var" && tokens[i - 2] === "\t") {
-                // Note private labels created by local `var` constructors.
-                return this._getOrAddPrivateLabel(token);
             }
             if (this.privateLabels[token]) {
                 // Replace private token with new token.
