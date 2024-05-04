@@ -207,7 +207,7 @@ export class GDParser {
         // Process symbols.
         if (asciiSymbols.includes(token[0])) {
             // For GDScript only.
-            if (mode == "gd") {
+            if (mode === "gd") {
                 // Remove inferred type casting.
                 if (token === ":=") {
                     return "=";
@@ -255,7 +255,7 @@ export class GDParser {
                     }
                 }
                 let str = formatStringQuote(token);
-                if (mode == "tscn") {
+                if (mode === "tscn") {
                     str = toStandardJson(str);
                 }
                 str = JSON.parse(str);
@@ -273,7 +273,7 @@ export class GDParser {
                     }
                 }
                 str = JSON.stringify(str);
-                if (mode == "tscn") {
+                if (mode === "tscn") {
                     str = toGodotJson(str);
                 }
                 return str;
@@ -286,20 +286,20 @@ export class GDParser {
             // Ignore labels starting with numbers.
             return token;
         }
-        if (mode == "path") {
+        if (mode === "path") {
             // Ignore Godot labels.
             if (godotLabels.includes(token)) return token;
             return labels.get(token);
         }
-        if (mode == "tscn") {
+        if (mode === "tscn") {
             // Ignore Godot labels.
-            if (godotLabels.includes(token))  return token;
+            if (godotLabels.includes(token)) return token;
             // Only replace known strings.
             if (labels.has(token)) return labels.get(token);
             // Ignore unknown strings.
             return token;
         }
-        if (mode == "gd") {
+        if (mode === "gd") {
             // For GDScript files
             if (godotLabels.includes(token)) {
                 if (token === "class") {

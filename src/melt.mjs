@@ -32,7 +32,7 @@ function cleanEmptyFoldersRecursively(folder) {
         files = readdirSync(folder);
     }
 
-    if (files.length == 0) {
+    if (files.length === 0) {
         rmdirSync(folder);
         return;
     }

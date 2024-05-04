@@ -67,13 +67,13 @@ export function tokenise(str, mode = "gd") {
 			switch (c) {
 				case " ": skipBuffer(); return;
 				case ";":
-					if (mode == "tscn") {
+					if (mode === "tscn") {
 						setState("comment");
 						return;
 					}
 					break;
 				case "#":
-					if (mode == "gd") {
+					if (mode === "gd") {
 						setState("comment");
 						return;
 					}
@@ -87,7 +87,7 @@ export function tokenise(str, mode = "gd") {
 					setState("string");
 					return;
 				case "/":
-					if (mode == "clang") {
+					if (mode === "clang") {
 						if (c === "/") {
 							const cNxt = str[i + 1];
 							if (cNxt === "/") {
@@ -102,7 +102,7 @@ export function tokenise(str, mode = "gd") {
 					break;
 			}
 			setState("symbol");
-		} else if (mode == "path" || mode == "tscn") {
+		} else if (mode === "path" || mode === "tscn") {
 			setState("label_path");
 		} else if (asciiNumbers.includes(c)) {
 			setState("number");

@@ -10,7 +10,7 @@ const symbols = [];
 for (let i = 0; i < 128; i++) {
     if (i >= 48 && i <= 57) continue;
     if (i >= 65 && i <= 90) continue;
-    if (i == 95) continue;
+    if (i === 95) continue;
     if (i >= 97 && i <= 122) continue;
     symbols.push(char(i));
 }
@@ -67,7 +67,7 @@ export function isString(str) {
     const sym = str[0];
     switch (sym) {
         case `"`: case "'":
-            if (str[str.length - 1] == sym) {
+            if (str[str.length - 1] === sym) {
                 if (str[1] != sym && str[2] != sym) {
                     return sym;
                 }
