@@ -76,7 +76,7 @@ function removeTypeCasting(token, tokens, i) {
             if (tokens[ii] === ")") bracesStack ++;
             if (tokens[ii] === "(") bracesStack --;
             if (bracesStack) continue;
-            if (tokens[ii] === "export") return token; 
+            if (tokens[ii] === "export") return token; // Prevent catastrophe where Godot needs type to stay in export types.
             if (tokens[ii] === "\n") break;
         }
         // Remove explicit type casting.
