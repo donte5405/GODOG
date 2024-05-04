@@ -87,6 +87,8 @@ class GetId {
 export class Labels {
     /** If this is for release mode. */
     releaseMode = false;
+    /** @type {string[]} List of all labels that both pairs are randomly generated. */
+    randomList = [];
     /** @type {string[]} List of all labels that got new name generated. */
     list = [];
     /** @type {Record<string,string>} List of strings mapped from the list. */
@@ -119,7 +121,10 @@ export class Labels {
      * @param {string} [name] 
      */
     get(name) {
-        if (!name) name = getUniqueId();
+        if (!name) {
+            name = getUniqueId();
+            this.randomList.push(name);
+        }
         if (!this.list.includes(name)) {
             if (this.getId) {
                 return this.map(name, this.getId.get());
@@ -142,6 +147,13 @@ export class Labels {
     }
 
     exportDebugSymbols() {
+        const list = this.randomList;
+        const listMap = this.listMap
+        for (const key of list) {
+            const pair = listMap[key];
+            delete listMap[pair];
+            delete listMap[key];
+        }
         return JSON.stringify(this.listMap);
     }
 
