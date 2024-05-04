@@ -74,10 +74,8 @@ function removeTypeCasting(token, tokens, i) {
 
 /** Token parser object. */
 export class GDParser {
-    /** @type {string[]} Private labels. */
-    privateLabels = [];
-    /** @type {Record<string,string>} Newly mapped private labels. */
-    newPrivateLabels = {}
+    /** @type {Record<string,string>} Private labels. */
+    privateLabels = {};
     /** Filename that the parser is handling. Does nothing except warning users. */
     fileName = "";
 
@@ -154,9 +152,21 @@ export class GDParser {
     }
 
     /**
+     * Get a private label mapped to the specified source label.
+     * @param {string} sourceLabel 
+     */
+    _getOrAddPrivateLabel(sourceLabel) {
+        if (!this.privateLabels[sourceLabel]) {
+            this.privateLabels[sourceLabel] = labels.get();
+        }
+        return this.privateLabels[sourceLabel];
+    }
+
+    /**
      * Parse specified token and decide if the specified token should be returned as what.
      * @param {string|string[]} tokens
      * @param {number} i
+     * @param {"gd"|"clang"|"tscn"|"path"|"func_head"} mode
      * @returns {string}
      */
     parseToken(tokens, i = 0, mode = this.mode) {
@@ -165,8 +175,6 @@ export class GDParser {
         }
 
         const token = tokens[i];
-        const allPrivateLabels = this.privateLabels;
-        const newPrivateLabels = this.newPrivateLabels;
 
         // Process symbols.
         if (asciiSymbols.includes(token[0])) {
@@ -194,8 +202,7 @@ export class GDParser {
                         // Define private labels.
                         const privateLabels = tokenNsp.split(" ").join("").split("#GODOG_PRIVATE:")[1].split(",");
                         for (const privateLabel of privateLabels) {
-                            newPrivateLabels[privateLabel] = labels.get();
-                            allPrivateLabels.push(privateLabel);
+                            this._getOrAddPrivateLabel(privateLabel);
                         }
                         // Remove comment.
                         return "";
@@ -243,11 +250,6 @@ export class GDParser {
         if (mode == "path") {
             // Ignore Godot labels.
             if (godotLabels.includes(token)) return token;
-            if (allPrivateLabels.includes(token)) {
-                // Replace private token with new token.
-                if (tokens[i - 1] === ":") return labels.get(token);
-                return newPrivateLabels[token];
-            }
             return labels.get(token);
         }
         if (mode == "tscn") {
@@ -261,13 +263,42 @@ export class GDParser {
         if (mode == "gd") {
             // For GDScript files
             if (godotLabels.includes(token)) {
+                if (token === "func") {
+                    // Noting private labels from functions.
+                    let ii = i + 1;
+                    for (; ii < tokens.length; ii++) {
+                        // Just in case for Godot 4.x
+                        if (tokens[ii] === "(") break;
+                    }
+                    let bracketStack = 1;
+                    for (ii += 1; ii < tokens.length; ii++) {
+                        const bToken = tokens[ii];
+                        if (bToken === "(") {
+                            bracketStack ++;
+                            continue;
+                        }
+                        if (bToken === ")") {
+                            bracketStack --;
+                            if (!bracketStack) break;
+                            continue;
+                        }
+                        if ([",", "("].includes(tokens[ii - 1])) {
+                            this._getOrAddPrivateLabel(tokens[ii]);
+                        }
+                    }
+                    return token;
+                }
                 // Try to get rid of type casting if possible.
                 return removeTypeCasting(token, tokens, i);
             }
-            if (allPrivateLabels.includes(token)) {
+            if (tokens[i - 1] === "var" && tokens[i - 2] === "\t") {
+                // Note private labels created by local `var` constructors.
+                return this._getOrAddPrivateLabel(token);
+            }
+            if (this.privateLabels[token]) {
                 // Replace private token with new token.
                 if (tokens[i - 1] === ".") return labels.get(token);
-                return newPrivateLabels[token];
+                return this.privateLabels[token];
             }
             if (gdscriptUserTypes.includes(token)) {
                 // Remove user type casting.

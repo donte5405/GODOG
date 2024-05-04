@@ -100,12 +100,16 @@ json["_ab"]
 #### 2. Private Field Mangler
 This GDScript macro indentifies any labels that the user want it to be private fields, this help complicating source restoration even more, but also introduces a phenomenon where it causes errors if the field is accessed outside of a script file.
 
+You don't need to add private labels for function parameters and local variables. They'll be automatically generated.
+
 ```gdscript
 #GODOG_PRIVATE:_velocity
 ```
 
+*WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that.*
 
-### 3. Ignoring files
+
+#### 3. Ignoring files
 By default, GODOG will ignore file names that start with dot (`.`).
 
 ---
@@ -255,7 +259,7 @@ Here's an example of how this will work:
 ```gdscript
 extends Node
 
-#GODOG_PRIVATE: _Target, _nodeToWait, _prevModulate, _stt, _prevPos, _prevScale
+#GODOG_PRIVATE: _Target
 #GODOG_PRIVATE: Start
 
 export var TargetPath := NodePath("..")
@@ -343,6 +347,7 @@ _trCharacterIcon.texture = load(tr("PathDefaultCharacterIcon"))
 - **Resource mapping with string formatting will not work!**
 	(Example: `"res://scn/scn_game_%d.tscn" % index`, `"Path/To/My/Node%d" % index`)
 - **It loves destroying GUI strings. To avoid the issue, store readable strings in translation files instead.**
+- Sub classes are still extremely buggy.
 
 ---
 
