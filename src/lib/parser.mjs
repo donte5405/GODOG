@@ -242,6 +242,11 @@ export class GDParser {
 
             // Parse user-defined strings.
             if (isString(token)) {
+                if (mode === "tscn") {
+                    if (tokens[i - 8] === "application" && tokens[i - 4] === "config" && tokens[i - 3] === "/" && tokens[i - 2] === "name" && tokens[i - 1] === "=") {
+                        return token; // Prevent game name to be changed (crucial, because Godot references this for file saving).
+                    }
+                }
                 if (tokens[i + 1] === "%") {
                     if (config) {
                         if (!config.ignoreStringFormattings) {
