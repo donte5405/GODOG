@@ -177,7 +177,7 @@ Noting that this way, your game's code will become easier to read when getting d
 ---
 
 ### Working With Game Server APIs
-Since GODOG aims at scrambling strings in Godot projects. This makes some of implementations such as API calls completely butchered. The mitigation is already explained as above. But GODOG also exports a complete JSON of "debug symbols" that can be used for remappings. It also offers bi-directional translation, which means this can be used to translate strings in both ways. To utilise it on API game servers, simply using it to convert mangled keys into readable keys. Here's an example of JavaScript-based implementations:
+Since GODOG aims at scrambling strings in Godot projects. This makes some of implementations such as API calls completely butchered. The mitigation is already explained as above. But GODOG also exports a complete JSON of "debug symbols" that can be used for remappings. It also offers bi-directional translation, which means this can be used to translate strings in both ways. To utilise it on API game servers, simply using it to convert mangled keys into readable keys. Here's an example of JavaScript-based implementation of the translator:
 
 ```js
 /**
@@ -207,6 +207,29 @@ function translate(dict, obj) {
 ```
 
 This snippet also works to mitigate direct API calls with readable strings (in case if the bad actors somehow know the unmangled names) since the readable strings will be translated into mangled strings, rendering the attempt to access the API with readable names useless.
+
+*This also leaves a vulnerability where the API can be exposed by some sort of mapping attack. Which means everything that involve custom strings should always be verified in the database that if it contains strings in the translation table and flag it as illegal operation.
+
+Here's an example of JavaScript implementation of the verifier:
+
+```js
+/**
+ * Check if the translator key exists.
+ * @param {Record<string,string>} dict 
+ */
+function trKeyExists(dict) {
+    /** @param {string[]} strings */
+    return (...strings) => {
+        for (const s of strings) {
+            if (dict[s]) return true;
+        }
+        return false;
+    };
+}
+
+// An example to detect bad inputs in username & password input.
+trKeyExists(dict)(username, password);
+```
 
 ---
 
