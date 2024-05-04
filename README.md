@@ -104,6 +104,10 @@ This GDScript macro indentifies any labels that the user want it to be private f
 #GODOG_PRIVATE:_velocity
 ```
 
+
+### 3. Ignoring files
+By default, GODOG will ignore file names that start with dot (`.`).
+
 ---
 
 ### CAUTION (MUST READ)
