@@ -13,7 +13,7 @@ export function fileList(dir, ignoreFilesWithPrefixes = true, files = []) {
     Fs.readdirSync(dir).forEach(file => {
         if (ignoreFilesWithPrefixes) {
             switch (file[0]) {
-                case ".": case "_":
+                case ".":
                     return;
             }
         }
