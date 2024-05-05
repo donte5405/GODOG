@@ -1,5 +1,5 @@
 #  GODOG
-Because not all Godot projects should be (physically) open source! That's just unacceptable!
+Godot 3.x project minifier/obfuscator. Because not all Godot projects should be (physically) open source! That's just unacceptable!
 
 ![Godot Engine Logo Copyright (c) 2017 Andrea Calabró. Altered to resemble dog's look. This work is licensed under the Creative Commons Attribution 4.0 International](https://github.com/donte5405/Godog/assets/134863321/9aeabe59-f11f-4e11-898d-a13ea7c0142c)
 
@@ -11,7 +11,13 @@ If you aren't afraid of it ruining your work, use it however you please, but **d
 ---
 
 ### What This Project Does?
-It tries to strip away every single user-defined labels as much as it's realistically possible while still maintaining project's functionality the best it can.
+In short, it tries to strip away every single user-defined labels as much as it's realistically possible while still maintaining project's functionality the best it can.
+
+**List of GODOG features.**
+- Minify all user labels to compact form (3 – 7 bytes long) while *automatically* avoid all Godot's reserved words and API references.
+- Unify user's source tree, in other words, move all Godot related files to project root directory. Making it a lot more difficult to trace and understand the entire project.
+- Automatic code analysis and warn if the project is compatible with GODOG or not.
+- Provide a feature to encapsulate private fields and automatically handle local fields to make it even more difficult to construct readable code back.
 
 ---
 
@@ -20,8 +26,13 @@ No, nor it's even remotely close. This only strips away anything that Godot does
 
 ---
 
+### Does It Really Obfuscate Code?
+If source minification doesn't count as obfuscation, no.
+
+---
+
 ### Then What's The Point?
-Online games being made with Godot without any of custom toolchains to scramble its source code will be vulnerable by default. In commercial scenarios it's absolutely undesirable to have the source code always readable and especially easily alterable, even with the scenario where you have the game operated mostly server-side. Even if the game is just for the display, if the server logic is easily replicable, there's nothing that stops bad actors to develop custom clients to gain advantages in your game and skip your "legitimate" client completely, or even using your "client shell" for their own games being operated underground. This project adds extra tasks to those bad actors trying to take advantage on your Godot project.
+Online games being made with Godot without any of custom toolchains to scramble its source code will be vulnerable by default. In commercial scenarios it's absolutely undesirable to have the source code always readable and especially easily alterable, even with the scenario where you have the game operated mostly server-side. Even if the game is just for the display, if the server logic is easily replicable, there's nothing that stops bad actors to develop custom clients to gain advantages in your game and skip your "legitimate" client completely, or even using your "client shell" for their own games being operated underground. This project adds extra tasks to those bad actors trying to take advantage of your Godot project.
 
 ---
 
@@ -30,10 +41,16 @@ Make sure that you have Node.JS 21.6.2 or later.
 
 Clone this project, and clone/download Godot's source code from the Godot repository. Don't forget to check/switch branch if the version you use matches with the version that you're using to develop the game.
 
-Then, run this command:
+`cd` to the root of the folder, then run this command:
 
 ```sh
 ./godot.labels.gen.sh /path/to/the/godot/source/code/directory
+```
+
+Alternatively, if you're using other OSes (such as Windows) and have Node.JS installed, this also does work:
+
+```powershell
+node src/labels.gen.mjs C:\path\to\godot\source\code\directory
 ```
 
 It will start generating possible Godot labels the best effort it can, this need to be run only once. You can also delete the Godot source code after this action.
@@ -44,7 +61,13 @@ It will start generating possible Godot labels the best effort it can, this need
 To start converting the project into a scrambled one, run the command below:
 
 ```sh
-./godog.sh /path/to/your/project /path/to/target/folder
+./godog.sh /path/to/your/project /path/to/target/directory
+```
+
+Alternatively, if you're using other OSes (such as Windows) and have Node.JS installed, this also does work:
+
+```powershell
+node src/main.mjs C:\path\to\your\project C:\path\to\target\directory
 ```
 
 This will generate a new Godot project from `/path/to/your/project` into `/path/to/target/folder`. Also, there will be two files generated into `/path/to/your/project`.
@@ -106,7 +129,7 @@ You don't need to add private labels for function parameters and local variables
 #GODOG_PRIVATE:_velocity
 ```
 
-*WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that.*
+*WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that. Also, for string paths with single label, GODOG will always use private labels first. If you're accessing parameters with `["string_name"]` syntax use `.` accessor instead, or simply try to write code with "suggested" name styles to avoid the issue as much as it's realistically possible.*
 
 
 #### 3. Ignoring files
