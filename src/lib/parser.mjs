@@ -250,7 +250,7 @@ export class GDParser {
                 if (tokens[i + 1] === "%") {
                     if (config) {
                         if (!config.ignoreStringFormattings) {
-                            throw new Error(`[${this.fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game that only supports English.`);
+                            throw new Error(`[${this.fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game only supports English.`);
                         }
                     }
                 }
