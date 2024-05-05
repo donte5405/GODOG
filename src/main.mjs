@@ -9,7 +9,7 @@ import { GDParser, parserSetConfig } from "./lib/parser.mjs";
 import { checkFileExtension } from "./lib/strings.mjs";
 import { loadConfig } from "./lib/options.mjs";
 import { meltDirectory } from "./melt.mjs";
-import { translations } from "./lib/locale.mjs";
+import { flushTranslations, translations } from "./lib/locale.mjs";
 import { parseLocaleCsv } from "./lib/locale.csv.mjs";
 
 
@@ -91,6 +91,10 @@ console.log("Compressing long-ass user labels...");
 labels.compress();
 
 
+// Flush translation (because we don't need dupes).
+flushTranslations();
+
+
 // Scramble!
 console.log("Screwing entire project...");
 for (const fileLocation of dirOutFiles) {
@@ -113,8 +117,8 @@ for (const fileLocation of dirOutFiles) {
 
 
 // Port translations.
-for (const translated of Object.keys(translations)) {
-    await writeFile(join(translationLocation, translations[translated] + ".txt"), translated);
+for (const translationKey of Object.keys(translations)) {
+    await writeFile(join(translationLocation, translationKey + ".txt"), translations[translationKey]);
 }
 
 

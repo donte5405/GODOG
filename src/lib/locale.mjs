@@ -10,6 +10,14 @@ const trQuote = "_*_*_*_";
 export const translations = {};
 
 
+/** Flush all translation keys. */
+export function flushTranslations() {
+    for (const key of Object.keys(translations)) {
+        delete translations[key];
+    }
+}
+
+
 /**
  * Check the specified string if it has translations inside.
  * @param {string} str 
@@ -32,7 +40,7 @@ export function parseTranslations(str) {
         const json = JSON.parse(`{${lines[i]}}`);
         const strid = randomUUID().split("-").join("");
         for (const lang of Object.keys(json)) {
-            translations[json[lang]] = md5(lang + "_" + strid);
+            translations[md5(lang + "_" + strid)] = json[lang];
         }
         lines[i] = strid;
     }
