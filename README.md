@@ -5,7 +5,7 @@ Godot 3.x project minifier/obfuscator. Because not all Godot projects should be 
 
 ---
 
-## Still Not Ready For Production!
+### Still Not Ready For Production!
 If you aren't afraid of it ruining your work, use it however you please, but **don't ever say that I didn't warn you**.
 
 ---
@@ -138,7 +138,6 @@ By default, GODOG will ignore file names that start with dot (`.`).
 ---
 
 ### CAUTION (MUST READ)
-
 Since this project involves a complete string manipulation, it may introduce undesirable side effects from such procedure, and this could cause both representation problems (the game displays scrambled text), or **rendering API communications and data read/write** on storage **completely broken**, **or rendering the game unplayable**.
 
 First and foremost, Unless it's absolutely intentional for reasons (see below), **DO NOT name strings with anything but Latin characters (a-z, A-Z), numbers, and underscore (`_`)**, since GODOG can't detect it efficiently, especially in Godot resource (`.tscn`/`.tres`) files.
