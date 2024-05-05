@@ -5,6 +5,17 @@ Godot 3.x project minifier/obfuscator. Because not all Godot projects should be 
 
 ---
 
+### Final result
+Transforms your Godot 3.x project from this,
+
+![image](https://github.com/donte5405/Godog/assets/134863321/a3821eb2-a237-432a-a62a-c57dd53e090d)
+
+...to this!
+
+![image](https://github.com/donte5405/Godog/assets/134863321/6fce4ca0-e203-49fe-b4f3-9a181d80b161)
+
+---
+
 ### Still Not Ready For Production!
 If you aren't afraid of it ruining your work, use it however you please, but **don't ever say that I didn't warn you**.
 
@@ -41,7 +52,7 @@ Make sure that you have Node.JS 21.6.2 or later.
 
 Clone this project, and clone/download Godot's source code from the Godot repository. Don't forget to check/switch branch if the version you use matches with the version that you're using to develop the game.
 
-`cd` to the root of the folder, then run this command:
+`cd` to the root of the source code directory, then run this command:
 
 ```sh
 ./godot.labels.gen.sh /path/to/the/godot/source/code/directory
@@ -230,7 +241,7 @@ function translate(dict, obj) {
 
 This snippet also works to mitigate direct API calls with readable strings (in case if the bad actors somehow know the unmangled names) since the readable strings will be translated into mangled strings, rendering the attempt to access the API with readable names useless.
 
-*This also leaves a vulnerability where the API can be exposed by some sort of mapping attack. Which means everything that involve custom strings should always be verified in the database that if it contains strings in the translation table and flag it as illegal operation.
+However, this also leaves a vulnerability where the API can be exposed by some sort of mapping attack. Which means everything that involve custom strings should always be verified in the database that if it contains strings in the translation table and flag it as illegal operation.
 
 Here's an example of JavaScript implementation of the verifier:
 
@@ -252,44 +263,6 @@ function trKeyExists(dict) {
 // An example to detect bad inputs in username & password input.
 trKeyExists(dict)(username, password);
 ```
-
----
-
-### TIP: Using Translation Table To Store Texts
-It may sound absurd, but translation mechanism involves determining which strings that will be used or uses some sort of hash tables. This way helps the source to dissociate relations between scripts and readable descriptions, making it more difficult to search for specific implementations. Godot's built-in `TranslationServer` works really well in this regard. In the translation CSV, putting string keys in quadruple underscores to indicate GODOG that keys must be mangled.
-
-```csv
-"key","en"
-"GREETING","Hello world!"
-```
-
-After GODOG manages to mangle CSV files, Godot also automatically converts  the mangled CSV table into loadable binary and leave the CSV files in PCK exports.
-
-However, the disadvantage of this approach is that Godot's `TranslationServer` is in-memory. If the project has a lot of paragraph worthy of strings (depending on the project's size), it could instead be very undesirable to have them in the memory (especially on HTML5 platform). GODOG also offers a translator that helps on stream-based translations.
-
-To integrate disk-based translations. GODOG offers a syntax that helps in this regard. This can be done in any TSCN/TRES files by putting translation keys in `_*_*_*_` brackets:
-
-```
-_*_*_*_
-"en": "Hello!",
-"es": "¡Hola!",
-"de": "Hallo!",
-"fr": "Bonjour!",
-"cn": "你好!",
-"ja": "こんにちは！",
-"th": "สวัสดี!"
-_*_*_*_
-```
-
-The way it stores data is pretty similar to JSON, just replace `{` and `}` with `_*_*_*_` instead. In the debugging environment, the translation will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many of supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored in a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
-
-To translate strings using this functionality, use `Tr.dsk()` function from `translator.gd` (stored in `gd` directory of this repo):
-
-```gdscript
-Tr.dsk(resource_object.text_hello)
-```
-
-Unlike Godot's translation function, this translation function works differently since it involves no unique key. Which means the style of `Tr.dsk("greeting")` will not work with this function. It's on this design since it's intended to handle large strings in resource files.
 
 ---
 
@@ -359,6 +332,44 @@ func Start() -> void:
 		_stt.connect("finished", _Target, "hide")
 
 ```
+
+---
+
+### TIP: Using Translation Table To Store Texts
+It may sound absurd, but translation mechanism involves determining which strings that will be used or uses some sort of hash tables. This way helps the source to dissociate relations between scripts and readable descriptions, making it more difficult to search for specific implementations. Godot's built-in `TranslationServer` works really well in this regard. In the translation CSV, putting string keys in quadruple underscores to indicate GODOG that keys must be mangled.
+
+```csv
+"key","en"
+"GREETING","Hello world!"
+```
+
+After GODOG manages to mangle CSV files, Godot also automatically converts  the mangled CSV table into loadable binary and leave the CSV files in PCK exports.
+
+However, the disadvantage of this approach is that Godot's `TranslationServer` is in-memory. If the project has a lot of paragraph worthy of strings (depending on the project's size), it could instead be very undesirable to have them in the memory (especially on HTML5 platform). GODOG also offers a translator that helps on stream-based translations.
+
+To integrate disk-based translations. GODOG offers a syntax that helps in this regard. This can be done in any TSCN/TRES files by putting translation keys in `_*_*_*_` brackets:
+
+```
+_*_*_*_
+"en": "Hello!",
+"es": "¡Hola!",
+"de": "Hallo!",
+"fr": "Bonjour!",
+"cn": "你好!",
+"ja": "こんにちは！",
+"th": "สวัสดี!"
+_*_*_*_
+```
+
+The way it stores data is pretty similar to JSON, just replace `{` and `}` with `_*_*_*_` instead. In the debugging environment, the translation will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many of supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored in a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
+
+To translate strings using this functionality, use `Tr.dsk()` function from `translator.gd` (stored in `gd` directory of this repo):
+
+```gdscript
+Tr.dsk(resource_object.text_hello)
+```
+
+Unlike Godot's translation function, this translation function works differently since it involves no unique key. Which means the style of `Tr.dsk("greeting")` will not work with this function. It's on this design since it's intended to handle large strings in resource files.
 
 ---
 
