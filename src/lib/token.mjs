@@ -91,9 +91,6 @@ export function tokenise(str, mode = "gd") {
 							skipBuffer();
 							return;
 						}
-					} else if (mode === "clang") {
-						skipBuffer();
-						return;
 					}
 					break;
 				case "]":
