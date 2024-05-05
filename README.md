@@ -141,7 +141,7 @@ By default, GODOG will ignore file names that start with dot (`.`).
 
 Since this project involves a complete string manipulation, it may introduce undesirable side effects from such procedure, and this could cause both representation problems (the game displays scrambled text), or **rendering API communications and data read/write** on storage **completely broken**, **or rendering the game unplayable**.
 
-First and foremost, Unless it's absolutely intentional for reasons (see below), **DO NOT name strings with anything but Roman characters and underscore (`_`)**, since GODOG can't detect it efficiently, especially in Godot resource (`.tscn`/`.tres`) files.
+First and foremost, Unless it's absolutely intentional for reasons (see below), **DO NOT name strings with anything but Latin characters (a-z, A-Z), numbers, and underscore (`_`)**, since GODOG can't detect it efficiently, especially in Godot resource (`.tscn`/`.tres`) files.
 
 ```gdscript
 "this_is_my_string" # correct
