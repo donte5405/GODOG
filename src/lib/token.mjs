@@ -58,6 +58,7 @@ export function tokenise(str, mode = "gd") {
 	let i = 0;
 	let buffer = "";
 	let escapeChar = 0;
+	let bracketStack = 0;
 	let strThreeQuotes = false;
 
 	const entryState = () => {
@@ -66,6 +67,43 @@ export function tokenise(str, mode = "gd") {
 		if (asciiSymbols.includes(c)) {
 			switch (c) {
 				case " ": skipBuffer(); return;
+				case "\\":
+					if (mode === "gd") {
+						// Get rid of back slash syntaxes.
+						while ([ "\\", "\n", "\t" ].includes(str[i])) {
+							skipBuffer();
+						}
+						return;
+					}
+					break;
+				// If it's GDScript, ignore \n and \t  when it's in brackets.
+				case "[":
+				case "(":
+				case "{":
+					if (mode === "gd") {
+						bracketStack ++;
+					}
+					break;
+				case "\t":
+				case "\n":
+					if (mode === "gd") {
+						if (bracketStack) {
+							skipBuffer();
+							return;
+						}
+					} else if (mode === "clang") {
+						skipBuffer();
+						return;
+					}
+					break;
+				case "]":
+				case ")":
+				case "}":
+					if (mode === "gd") {
+						bracketStack --;
+					}
+					break;
+				// END If it's GDScript, ignore \n \t when it's in brackets.
 				case ";":
 					if (mode === "tscn") {
 						setState("comment");
@@ -216,6 +254,10 @@ export function tokenise(str, mode = "gd") {
 		entryState();
 	}
 	submitBuffer(); // FIX: the script not picking the last element in the string stream.
+
+	if (bracketStack !== 0) {
+		throw new Error("Some brackets aren't closed properly.");
+	}
 
 	/** @type {string[]} */
 	const postStrs = [];
