@@ -13,6 +13,8 @@ export class Configuration {
     get meltEnabled() { return this.data["scrambleGodotFiles"] ? true : false; }
     /** If this is configured to ignore string formattings. */
     get ignoreStringFormattings() { return this.data["ignoreStringFormattings"] ? true : false; }
+    /** If type casting should be bothered. */
+    get removeTypeCasting() { return this.data["removeTypeCasting"] ? true: false }
 
     constructor(o) {
         if (o) this.data = o;

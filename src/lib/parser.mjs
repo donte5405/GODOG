@@ -69,6 +69,10 @@ export function parserSetConfig(c) {
  * @param {number} i 
  */
 function removeTypeCasting(token, tokens, i) {
+    if (config) {
+        // If type casting shouldn't be bothered, skip.
+        if (!config.removeTypeCasting) return token;
+    }
     if (tokens[i - 1] === ":" && [ "=", ",", ")", "\n" ].includes(tokens[i + 1])) {
         let bracesStack = 0;
         for (let ii = i - 4; ii > 0; ii--) {
@@ -210,7 +214,12 @@ export class GDParser {
             if (mode === "gd") {
                 // Remove inferred type casting.
                 if (token === ":=") {
-                    return "=";
+                    if (config) {
+                        if (config.removeTypeCasting) {
+                            return "=";
+                        }
+                    }
+                    return token;
                 }
                 // Parse comment.
                 if (token[0] === "#") {
