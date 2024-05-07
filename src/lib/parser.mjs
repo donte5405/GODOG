@@ -314,7 +314,7 @@ export class GDParser {
                     }
                     this.currentClassIndent = countIndents(tokens, i);
                     return token;
-                } else if ([ "extends", "class_name", "var", "const", "enum", "signal", "func" ].includes(token)) {
+                } else if ([ "extends", "tool", "class_name", "var", "const", "enum", "signal", "export", "onready", "func", "static", "remote", "master", "puppet", "remotesync", "mastersync", "puppetsync" ].includes(token)) {
                     // Calibrate current (inner) class indentation if it falls into lower indentation.
                     if (hasIndentAtItsFront(tokens, i)) {// In case of Godot 4, because it has lambda.
                         const myIndent = countIndents(tokens, i);
