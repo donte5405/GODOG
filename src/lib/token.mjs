@@ -18,40 +18,71 @@ const gdComboSymbols = [
  * Converts space to tab.
  * @param {string} str 
  */
-function convertSpaceToTab(str) {
+function formatGdScript(str) {
     const strs = str.split("\n");
-    let inString = false;
-    for (let i = 0; i < strs.length; i++) {
-        if (!inString) {
+	const strs_len = strs.length;
+    let inMultilineString = false;
+    for (let i = 0; i < strs_len; i++) {
+        if (!inMultilineString) {
             const lines = strs[i].split("");
-            if (lines[0] !== " ") continue;
-            for (let j = 0; j < lines.length; j++) {
+			let j = 0;
+            for (; j < lines.length; j++) {
+				if (lines[j] === "\t") continue;
                 if (lines[j] === " ") {
                     lines[j] = "\t";
                     continue;
                 }
                 break;
             }
-            strs[i] = lines.join("");
+			if (lines.length && j === lines.length) {
+				strs[i] = "\r"; // Mark empty tabulated line as carriage return to remove.
+			} else {
+            	strs[i] = lines.join("");
+			}
         }
         if (strs[i].includes(`"""`)) {
             if (strs[i].split(`"""`).length > 2) {
                 throw new Error(`Multiple multiline strings in single line isn't supported.`);
             }
-            inString = !inString;
+            inMultilineString = !inMultilineString;
         }
     }
-    return strs.join("\n");
+	// Get rid of excessive newlines.
+	let newlineCount = 0;
+	for (let i = 0; i < strs_len; i++) {
+		if (strs[i] === "\r") {
+			strs[i] = "";
+			continue;
+		}
+		if (strs[i] === "") {
+			if (newlineCount < 1) {
+				strs[i] = "\n";
+				newlineCount ++;
+				continue;
+			}
+			strs[i] = "";
+			continue;
+		}
+		newlineCount = 0;
+		strs[i] += "\n";
+	}
+	if (strs[strs_len - 1] === "\n") {
+		// Fix newline growing at the end for some reason.
+		strs[strs_len - 1] = "";
+	}
+    return strs.join("");
 }
 
 
 /**
-     * Tokenise GDScript into something able to be processed.
-     * @param {string} str 
-	 * @param {"gd"|"clang"|"tscn"|"path"} mode
-     */
+ * Tokenise GDScript into something able to be processed.
+ * @param {string} str 
+ * @param {"gd"|"clang"|"tscn"|"path"} mode
+ */
 export function tokenise(str, mode = "gd") {
-	str = convertSpaceToTab(str);
+	if (mode === "gd") {
+		str = formatGdScript(str);
+	}
 
 	/** @type {string[]} */
 	const strs = [];
@@ -259,10 +290,15 @@ export function tokenise(str, mode = "gd") {
 	/** @type {string[]} */
 	const postStrs = [];
 	for (let i = 0; i < strs.length; i++) {
-		let symbol = strs[i] + strs[i + 1];
-		if (gdComboSymbols.includes(symbol)) {
+		const symbol3 = strs[i] + strs[i + 1] + strs[i + 2];
+		if (gdComboSymbols.includes(symbol3)) {
+			postStrs.push(symbol3);
+			i += 2;
+		}
+		const symbol2 = strs[i] + strs[i + 1];
+		if (gdComboSymbols.includes(symbol2)) {
 			// Group symbols together
-			postStrs.push(symbol);
+			postStrs.push(symbol2);
 			i += 1;
 			continue;
 		}
@@ -275,8 +311,9 @@ export function tokenise(str, mode = "gd") {
 /**
  * Assemble GD Tokens into string.
  * @param {string[]} token 
+ * @param {"gd"|"clang"|"tscn"|"path"} mode
  */
-export function assemble(token) {
+export function assemble(token, mode = "gd") {
 	/** @type {string[]} */
 	const newToken = [];
 	for (let i = 0; i < token.length; i++) {
@@ -293,6 +330,9 @@ export function assemble(token) {
 				}
 			}
 		}
+	}
+	if (mode === "gd") {
+		return formatGdScript(newToken.join(""));
 	}
 	return newToken.join("");
 }

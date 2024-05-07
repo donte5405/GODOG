@@ -121,7 +121,7 @@ export class GDParser {
      * @param {"gd"|"clang"|"tscn"|"path"} mode
      */
     static async parseFile(fileName, mode = "gd") {
-        return new this(mode).tellFileName(fileName).parse(await readFile(fileName, { encoding: "utf-8" }));
+        return new this(mode).tellFileName(fileName).parse(await readFile(fileName, { encoding: "utf-8" }), mode);
     }
 
     /**
@@ -140,7 +140,7 @@ export class GDParser {
         // writeFileSync(testPath + "/" + uuid + ".c.tscn", c );
         // return c;
         // return o.assemble(o.parseTokens(a));
-        return o.parse(str);
+        return o.parse(str, mode);
     }
 
     /**
@@ -157,7 +157,7 @@ export class GDParser {
      * @param {string} str 
      */
     parse(str, mode = this.mode) {
-        return this.assemble(this.parseTokens(this.tokenise(str, mode), mode));
+        return this.assemble(this.parseTokens(this.tokenise(str, mode), mode), mode);
     }
 
     /**
@@ -381,7 +381,7 @@ export class GDParser {
      * Assemble GD Tokens into string.
      * @param {string[]} token 
      */
-    assemble(token) {
-        return assemble(token);
+    assemble(token, mode = this.mode) {
+        return assemble(token, mode);
     }
 }

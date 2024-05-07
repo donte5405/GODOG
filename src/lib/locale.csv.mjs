@@ -47,7 +47,7 @@ export function parseLocaleCsv(str, filePath = "") {
 	let i = 0;
 	let separator = "";
 	let cellColIndex = 0;
-	const parser = new GDParser();
+	const parser = new GDParser("path");
 	const tokens = parser.tokenise(str);
 
 	// Verify expected CSV structures.
