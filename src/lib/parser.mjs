@@ -295,12 +295,12 @@ export class GDParser {
             // Ignore labels starting with numbers.
             return token;
         }
-        if (mode === "path") {
+        if (mode === "path") { // For path strings.
             // Ignore Godot labels.
             if (godotLabels.includes(token)) return token;
             return labels.get(token);
         }
-        if (mode === "tscn") {
+        if (mode === "tscn") { // For TSCN, TRES, other Godot related files, and files that don't need user labels randomisation.
             // Ignore Godot labels.
             if (godotLabels.includes(token)) return token;
             // Only replace known strings.
@@ -308,8 +308,7 @@ export class GDParser {
             // Ignore unknown strings.
             return token;
         }
-        if (mode === "gd") {
-            // For GDScript files
+        if (mode === "gd") { // For GDScript files.
             if (godotLabels.includes(token)) {
                 if (token === "class") {
                     // Set current (inner) class indentation depth.
