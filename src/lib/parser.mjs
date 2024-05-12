@@ -17,7 +17,7 @@ import { assemble, tokenise } from "./token.mjs";
 
 
 /** @type {string[]} User-defined GDScript types. */
-const gdscriptUserTypes = [];
+const gdScriptUserTypes = [];
 
 
 /** List of Godot labels. */
@@ -334,8 +334,8 @@ export class GDParser {
                 if (token === "class_name") {
                     // Note User types.
                     const className = tokens[i + 1];
-                    if (!gdscriptUserTypes.includes(className)) {
-                        gdscriptUserTypes.push(className);
+                    if (!gdScriptUserTypes.includes(className)) {
+                        gdScriptUserTypes.push(className);
                     }
                     return token;
                 }
@@ -376,7 +376,7 @@ export class GDParser {
                 if (tokens[i - 1] === ".") return labels.get(token);
                 return this.privateLabels[token];
             }
-            if (gdscriptUserTypes.includes(token)) {
+            if (gdScriptUserTypes.includes(token)) {
                 // Remove user type casting.
                 return removeTypeCasting(labels.get(token), tokens, i);
             }
