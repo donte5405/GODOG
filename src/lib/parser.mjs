@@ -198,7 +198,7 @@ export class GDParser {
      * Parse specified token and decide if the specified token should be returned as what.
      * @param {string|string[]} tokens
      * @param {number} i
-     * @param {"gd"|"clang"|"tscn"|"path"|"func_head"} mode
+     * @param {"gd"|"clang"|"tscn"|"path"} mode
      * @returns {string}
      */
     parseToken(tokens, i = 0, mode = this.mode) {
