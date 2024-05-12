@@ -309,6 +309,11 @@ export class GDParser {
             return token;
         }
         if (mode === "gd") { // For GDScript files.
+            if (isLabel(token) && tokens[i - 1] === "@") {
+                // In case of Godot 4, ignore labels with potential of being annotations.
+                // It should be safe to assume because Godot 3 only uses "@" for string names.
+                return token;
+            }
             if (godotLabels.includes(token)) {
                 if (token === "class") {
                     // Set current (inner) class indentation depth.
