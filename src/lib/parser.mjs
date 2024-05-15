@@ -110,6 +110,8 @@ export class GDParser {
     privateLabels = {};
     /** Filename that the parser is handling. Does nothing except warning users. */
     fileName = "";
+    /** If this parser is still in ignore block. */
+    isInIgnoreBlock = false;
 
     /**
      * Construct a token parser.
@@ -208,23 +210,22 @@ export class GDParser {
 
         const token = tokens[i];
 
+        // Ignore empty lines.
+        if (!token) return "";
+
         // Process symbols.
         if (asciiSymbols.includes(token[0])) {
             // For GDScript only.
             if (mode === "gd") {
-                // Remove inferred type casting.
-                if (token === ":=") {
-                    if (config) {
-                        if (config.removeTypeCasting) {
-                            return "=";
-                        }
-                    }
-                    return token;
-                }
                 // Parse comment.
                 if (token[0] === "#") {
                     const tokenNsp = token.split(" ").join("");
-                    "#GODOG_LABEL:";
+                    if (tokenNsp.indexOf("#GODOG_IGNORE") === 0) {
+                        // Ignore code blocks that aren't required.
+                        this.isInIgnoreBlock = !this.isInIgnoreBlock;
+                        tokens[i + 1] = ""; // also remove the line break behind it.
+                        return "";
+                    }
                     if (tokenNsp.indexOf("#GODOG_LABEL:") === 0) {
                         // Define scrambled label.
                         const userLabels = tokenNsp.split(" ").join("").split("#GODOG_LABEL:")[1].split(",");
@@ -234,7 +235,6 @@ export class GDParser {
                         // Remove comment.
                         return "";
                     }
-                    "#GODOG_PRIVATE:";
                     if (tokenNsp.indexOf("#GODOG_PRIVATE:") === 0) {
                         // Define private labels.
                         const privateLabels = tokenNsp.split(" ").join("").split("#GODOG_PRIVATE:")[1].split(",");
@@ -246,6 +246,19 @@ export class GDParser {
                     }
                     // Remove comment.
                     return "";
+                }
+                if (this.isInIgnoreBlock) {
+                    // Remove everything inside the ignore block.
+                    return "";
+                }
+                // Remove inferred type casting.
+                if (token === ":=") {
+                    if (config) {
+                        if (config.removeTypeCasting) {
+                            return "=";
+                        }
+                    }
+                    return token;
                 }
             }
 
@@ -395,6 +408,9 @@ export class GDParser {
      * @param {string[]} token 
      */
     assemble(token, mode = this.mode) {
+        if (this.isInIgnoreBlock) {
+            throw new Error(`Incomplete '#GODOG_IGNORE' block in the file '${this.fileName}'!`);
+        }
         return assemble(token, mode);
     }
 }

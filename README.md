@@ -146,7 +146,21 @@ You don't need to add private labels for function parameters and local variables
 *WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that. Also, for string paths with single label, GODOG will always use private labels first. If you're accessing parameters with `["string_name"]` syntax use `.` accessor instead, or simply try to write code with "suggested" name styles to avoid the issue as much as it's realistically possible.*
 
 
-#### 3. Ignoring files
+#### 3. Preprocessors
+This helps removing code blocks that don't need to be exported in the production releases, like debug blocks and tests.
+
+Simply use `#GODOG_IGNORE` between lines to tell GODOG to ignore lines inside the block:
+
+```gdscript
+var number = 1 + 2
+#GODOG_IGNORE
+if number == 3:
+    print("the number is actually 3!")
+#GODOG_IGNORE
+return number
+```
+
+#### 4. Ignoring files
 By default, GODOG will ignore file names that start with dot (`.`).
 
 ---
