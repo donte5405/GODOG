@@ -1,5 +1,5 @@
 //@ts-check
-import { convertToRelativePath, convertToRelativePaths, dirList, fileList } from "./file.list.mjs";
+import { convertToRelativePath, dirList, fileList } from "./file.list.mjs";
 import { cp, mkdir } from "fs/promises";
 import { join } from "path";
 

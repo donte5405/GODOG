@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { Configuration } from "./options.mjs";
 import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
+import { crucialPreprocessorBlocks } from "./preprocessor.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
 import { asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
@@ -220,6 +221,15 @@ export class GDParser {
                 // Parse comment.
                 if (token[0] === "#") {
                     const tokenNsp = token.split(" ").join("");
+                    for (const block of crucialPreprocessorBlocks) {
+                        if (tokenNsp.indexOf(block) === 0) {
+                            if (config) {
+                                config.crucialPreprocessorsDetected = true;
+                            }
+                            // Keep the comment for now, will use platform-specific preprocessors.
+                            return token;
+                        }
+                    }
                     if (tokenNsp.indexOf("#GODOG_IGNORE") === 0) {
                         // Ignore code blocks that aren't required.
                         this.isInIgnoreBlock = !this.isInIgnoreBlock;
