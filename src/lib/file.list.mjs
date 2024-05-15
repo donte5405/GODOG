@@ -4,6 +4,33 @@ import * as Fs from "fs";
 
 
 /**
+ * Convert specified paths to relative paths.
+ * @param {string} rootPath
+ * @param {string[]} paths 
+ */
+export function convertToRelativePaths(rootPath, paths) {
+	for (let i = 0; i < paths.length; i++) {
+        paths[i] = convertToRelativePath(rootPath, paths[i]);
+	}
+	return paths;
+}
+
+
+/**
+ * Convert specified path to relative path.
+ * @param {string} rootPath
+ * @param {string} path
+ */
+export function convertToRelativePath(rootPath, path) {
+    const destPart = path.split(rootPath).pop();
+    if (destPart) {
+        return destPart;
+    }
+    return path;
+}
+
+
+/**
  * Search for all files in the directory.
  * @param {string} dir Directory location.
  * @param {string[]} ignoredFiles List of files/directories to be ignored.
@@ -36,7 +63,7 @@ export function fileList(dir, ignoredFiles = [], files = []) {
 export function dirList(dir, excludeDirsWithFiles = [ ".gdignore" ], dirs = []) {
     for (const indicatorFile of excludeDirsWithFiles) {
         const iAbsolute = Path.join(dir, indicatorFile);
-        if (Fs.statSync(iAbsolute).isFile()) {
+        if (Fs.existsSync(iAbsolute)) {
             return dirs;
         }
     }
