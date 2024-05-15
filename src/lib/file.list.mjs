@@ -18,7 +18,7 @@ export function fileList(dir, ignoreNames = [], files = []) {
         }
         const absolute = Path.join(dir, file);
         if (Fs.statSync(absolute).isDirectory()) {
-            fileList(absolute, files);
+            fileList(absolute, ignoreNames, files);
             return;
         }
         files.push(absolute);
@@ -42,7 +42,7 @@ export function dirList(dir, ignoreNames = [], dirs = []) {
         }
         const absolute = Path.join(dir, file);
         if (Fs.statSync(absolute).isDirectory()) {
-            dirList(absolute, dirs);
+            dirList(absolute, ignoreNames, dirs);
             dirs.push(absolute);
             return;
         }
