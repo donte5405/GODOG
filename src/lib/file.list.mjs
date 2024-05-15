@@ -33,7 +33,13 @@ export function fileList(dir, ignoreNames = [], files = []) {
  * @param {string[]} ignoreNames List of files/directories to be ignored.
  * @param {string[]} [dirs] List of previous directories (blank if not specified).
  */
-export function dirList(dir, ignoreNames = [], dirs = []) {
+export function dirList(dir, ignoreNames = [ ".gdignore" ], dirs = []) {
+    for (const ignoreName of ignoreNames) {
+        const iAbsolute = Path.join(dir, ignoreName);
+        if (Fs.statSync(iAbsolute).isFile()) {
+            return dirs;
+        }
+    }
     Fs.readdirSync(dir).forEach(file => {
         if (ignoreNames.includes(file)) return;
         switch (file[0]) {
