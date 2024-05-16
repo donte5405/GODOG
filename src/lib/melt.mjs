@@ -11,9 +11,11 @@ const PROJECT_FILE_NAME = "project.godot";
 
 
 /** @type {Record<string, Remap>} */
-const mapsToChange = {}
-/** @type {Record<string, Remap>} */
-const mapsToMelt = {};
+const allRemaps = {};
+/** @type {Remap[]} */
+const mapsToChange = [];
+/** @type {Remap[]} */
+const mapsToMelt = [];
 
 
 /**
@@ -44,6 +46,29 @@ function cleanEmptyFoldersRecursively(folder) {
 }
 
 
+/**
+ * @param {string} rootPath 
+ * @param {string} filePath 
+ */
+function remap(rootPath, filePath) {
+	const oldPath = filePath.split(rootPath)[1];
+	if (!allRemaps[oldPath]) {
+		allRemaps[oldPath] = new Remap(oldPath);
+	}
+	return allRemaps[oldPath];
+}
+
+
+/**
+ * @param {Remap} map 
+ * @param {Remap[]} to 
+ */
+function insertMap(map, to) {
+	if (to.includes(map)) return;
+	to.push(map);
+}
+
+
 class Remap {
 	/** @type {Labels} */
 	static labels;
@@ -51,15 +76,17 @@ class Remap {
 	fileExtension = "";
 	oldPath = "";
 	myLabel = "";
+	melted = false;
 	/**
-	 * @param {string} rootPath 
-	 * @param {string} filePath 
+	 * @param {string} oldPath 
 	 */
-	constructor(rootPath, filePath) {
-		const oldPath = filePath.split(rootPath)[1];
+	constructor(oldPath) {
 		const fileExtension = oldPath.split(".").pop();
 		this.fileExtension = fileExtension ? fileExtension : "";
 		this.oldPath = oldPath;
+	}
+	get filePath() {
+		return this.melted ? this.newFilePath : this.oldFilePath;
 	}
 	get oldFilePath() {
 		return join(Remap.rootPath, this.oldPath);
@@ -78,6 +105,10 @@ class Remap {
 			this.myLabel = Remap.labels.get(); // It must be here to prevent labels depletion by it getting spammed in the constructor.
 		}
 		return this.myLabel + "." + this.fileExtension;
+	}
+	melt() {
+		this.melted = true;
+		return this;
 	}
 }
 
@@ -98,30 +129,26 @@ export async function meltDirectory(rootPath, labels) {
         }
     }
 	for (const filePath of filePaths) {
-		const map = new Remap(rootPath, filePath);
+		const map = remap(rootPath, filePath);
 		const oldPath = map.oldPath;
 		if (checkFileExtension(oldPath, [ "cfg", "godot", "csv" ]) || hasFile("default_env.tres", oldPath)) {
-			if (mapsToChange[oldPath]) continue;
-			mapsToChange[oldPath] = map;
-            continue;
+			insertMap(map, mapsToChange);
         }
         if (!checkFileExtension(oldPath, [ "tscn", "tres", "gd" ])) {
             continue;
         }
-		if (mapsToMelt[oldPath]) continue;
-		mapsToMelt[oldPath] = map;
+		insertMap(map, mapsToChange);
+		insertMap(map.melt(), mapsToMelt);
 	}
-	const allMapsToMelt = Object.values(mapsToMelt);
-	const allMapsToChange = Object.values(mapsToChange);
 	// Move files.
-	for (const map of allMapsToMelt) {
+	for (const map of mapsToMelt) {
 		await rename(map.oldFilePath, map.newFilePath);
 	}
 	// Alternate paths.
-	for (const map of allMapsToChange) {
-		const newFilePath = allMapsToMelt.includes(map) ? map.newFilePath : map.oldFilePath;
-        let str = await readFile(newFilePath, { encoding: "utf-8" });
-        for (const meltedMap of allMapsToMelt) {
+	for (const map of mapsToChange) {
+		const filePath = map.filePath;
+        let str = await readFile(filePath, { encoding: "utf-8" });
+        for (const meltedMap of mapsToMelt) {
 			const oldGodotPath = meltedMap.oldGodotPath;
 			const newGodotPath = meltedMap.newGodotPath;
             str = str
@@ -131,10 +158,9 @@ export async function meltDirectory(rootPath, labels) {
                 .split(`"*${oldGodotPath}"`).join(`"${newGodotPath}"`)
                 .split(`\\"${oldGodotPath}\\"`).join(`\\"${newGodotPath}\\"`);
 		}
-		await writeFile(newFilePath, str);
+		await writeFile(filePath, str);
     }
 	// Clear empty directories.
     cleanEmptyFoldersRecursively(rootPath);
-	await writeFile("./TEST.json", JSON.stringify(mapsToMelt));
-	await writeFile("./TEST2.json", JSON.stringify(mapsToChange));
+	await writeFile("./TEST.json", JSON.stringify(allRemaps, null, "\t"));
 }
