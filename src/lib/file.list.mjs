@@ -60,7 +60,7 @@ export function fileList(dir, ignoredFiles = [], files = []) {
  * @param {string[]} excludeDirsWithFiles List of files/directories that's an indicator to disregard the entire directory.
  * @param {string[]} [dirs] List of previous directories (blank if not specified).
  */
-export function dirList(dir, excludeDirsWithFiles = [ ".gdignore" ], dirs = []) {
+export function dirList(dir, excludeDirsWithFiles = [ ".gdignore", "godogignore" ], dirs = []) {
     for (const indicatorFile of excludeDirsWithFiles) {
         const iAbsolute = Path.join(dir, indicatorFile);
         if (Fs.existsSync(iAbsolute)) {
@@ -68,7 +68,6 @@ export function dirList(dir, excludeDirsWithFiles = [ ".gdignore" ], dirs = []) 
         }
     }
     Fs.readdirSync(dir).forEach(file => {
-        if (excludeDirsWithFiles.includes(file)) return;
         switch (file[0]) {
             case ".":
                 return;
