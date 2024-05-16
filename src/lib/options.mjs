@@ -27,8 +27,6 @@ export class Configuration {
     get ignoreStringFormattings() { return this.check("ignoreStringFormattings"); }
     /** If type casting should be bothered. */
     get removeTypeCasting() { return this.check("removeTypeCasting"); }
-    /** This tells directory path for the version with   */
-    get exportDebugTo() { return process.argv[4];}
     /** If this project will ignore crucial preprocessors and skip source code leak risks altogether. */
     get ignoreCrucialPreprocessors() { return this.check("ignoreCrucialPreprocessors"); }
 
