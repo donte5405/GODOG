@@ -42,7 +42,9 @@ export function checkFileExtension(path, extension) {
         extension = [ extension ];
     }
     for (const e of extension) {
-        if (path.length - path.indexOf("." + e) === e.length + 1) return true;
+        const ind = path.indexOf("." + e);
+        if (ind < 0) continue;
+        if (path.length - ind === e.length + 1) return true;
     }
     return false;
 }
@@ -54,7 +56,9 @@ export function checkFileExtension(path, extension) {
  * @param {string} path 
  */
 export function hasFile(filename, path) {
-    return path.indexOf(filename) === path.length - filename.length;
+    const ind = path.indexOf(filename);
+    if (ind < 0) return false;
+    return ind === path.length - filename.length;
 }
 
 
