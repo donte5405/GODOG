@@ -317,8 +317,7 @@ export class GDParser {
                                 throw new Error(directFormatStringProhibitedErr(this.fileName));
                             }
                         }
-                    } else if (looksLikeStringPath(str)) {
-                        // If it looks like index access.
+                    } else if (looksLikeStringPath(str)) { // Ignore string formatted string paths.
                         str = this.parse(str, "path");
                     }
                 }
