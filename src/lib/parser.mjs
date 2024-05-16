@@ -257,7 +257,7 @@ export class GDParser {
                     return "";
                 }
                 if (this.isInIgnoreBlock) {
-                    // Remove everything inside the ignore block.
+                    // Remove everything inside the ignore block (for symbols).
                     return "";
                 }
                 // Remove inferred type casting.
@@ -312,6 +312,10 @@ export class GDParser {
 
             // Other symbols.
             return token;
+        }
+        if (this.isInIgnoreBlock) {
+            // Remove everything inside the ignore block (for labels).
+            return "";
         }
         if (asciiNumbers.includes(token[0])) {
             // Ignore labels starting with numbers.
