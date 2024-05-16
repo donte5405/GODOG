@@ -26,9 +26,10 @@ export function stripGdBlock(src, block) {
 	const srcs = tokenise(src);
 	let stripping = false;
 	for (let i = 0; i < srcs.length; i++) {
-		if (srcs[i] === block) {
-			stripping = !stripping; 
-			srcs[i + 1] = ""; // Remove return after the script block.
+		if (srcs[i][0] === "#") {
+			if (srcs[i] === block) {
+				stripping = !stripping;
+			}
 			srcs[i] = "";
 			continue;
 		}
