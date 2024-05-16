@@ -72,6 +72,7 @@ It will start generating possible Godot labels the best effort it can, this need
 To start converting the project into a scrambled one, run the command below:
 
 ```sh
+# Export the project in standalone mode.
 node src/main.mjs /path/to/your/project /path/to/target/directory
 ```
 
@@ -140,7 +141,7 @@ json["_ab"]
 #### 2. Private Field Mangler
 This GDScript macro indentifies any labels that the user want it to be private fields, this help complicating source restoration even more, but also introduces a phenomenon where it causes errors if the field is accessed outside of a script file.
 
-You don't need to add private labels for function parameters and local variables. They'll be automatically generated.
+You don't need to add private labels for function parameters and local variables (`var` in function bodies). They'll be automatically recognised and mangled.
 
 ```gdscript
 #GODOG_PRIVATE:_velocity
@@ -150,7 +151,7 @@ You don't need to add private labels for function parameters and local variables
 
 
 #### 3. Labels Ignore
-Sometimes you still want 'some' labels to be exposed and be used by other toolings, or simply wanting the game to have modding support without exposing everything in the game for both source compactness and especially more refined way to isolate APIs between ones with modding support (+stable and predictable environment) and others that you want to make changes freely with less worrying about breaking user's mods.
+Sometimes you still want "some" labels to be exposed and be used by other toolings, or simply wanting the game to have modding support without exposing everything in the game for both source compactness and especially more refined way to isolate APIs between ones with modding support (+stable and predictable environment) and others that you want to make changes freely with less worrying about breaking user's mods.
 
 GODOG provides `#GODOG_API` for this purpose. It also supports multiple names in a same line.
 
