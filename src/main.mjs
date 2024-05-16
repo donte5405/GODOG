@@ -96,6 +96,13 @@ console.log("Copying source files...");
 await filesCopySelectively(dirLocation, tempLocation);
 
 
+// Delete all nastiness from the temp directory.
+// E.g., debug files and configurations.
+for (const fileName of [ "dbg.sym.json", "godog.json" ]) {
+    await rm(join(tempLocation, fileName), fsOptions);
+}
+
+
 // Note all files in the temp directory.
 console.log("Listing all files...");
 const tempLocationFiles = fileList(tempLocation);
@@ -175,7 +182,7 @@ if (dirOutServerLocation) { // Export server version.
 
 
 // Export debug symbols in dev folder.
-await writeFile(join(dirLocation, "/dbg.sym.json"), labels.exportDebugSymbols());
+await writeFile(join(dirLocation, "dbg.sym.json"), labels.exportDebugSymbols());
 
 
 // Indicate when it's done.
