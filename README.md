@@ -28,6 +28,9 @@ In short, it tries to strip away every single user-defined labels as much as it'
 - Minify all user labels to compact form (3 – 7 bytes long) while *automatically* avoid all Godot's reserved words and API references.
 - Unify user's source tree, in other words, move all Godot related files to project root directory. Making it a lot more difficult to trace and understand the entire project.
 - Automatic code analysis and warn if the project is compatible with GODOG or not.
+- Provide simple script preprocessors that help stripping unnecessary code blocks that aren't required in a production build, and/or separating builds between client & server builds.
+- Provide simple ways to exclude resources between debug source and production builds and/or client-server builds.
+- Provide a way to intentionally break version compatibility if mod maintainability is a priority, forcing modders to only stay in a sandbox.
 - Provide a feature to encapsulate private fields and automatically handle local fields to make it even more difficult to construct readable code back.
 
 ---
@@ -43,7 +46,9 @@ If source minification doesn't count as obfuscation, no.
 ---
 
 ### Then What's The Point?
-Online games being made with Godot without any of custom toolchains to scramble its source code will be vulnerable by default. In commercial scenarios it's absolutely undesirable to have the source code always readable and especially easily alterable, even with the scenario where you have the game operated mostly server-side. Even if the game is just for the display, if the server logic is easily replicable, there's nothing that stops bad actors to develop custom clients to gain advantages in your game and skip your "legitimate" client completely, or even using your "client shell" for their own games being operated underground. This project adds extra tasks to those bad actors trying to take advantage of your Godot project.
+Online games being made with Godot without any of custom toolchains to scramble its source code will be vulnerable by default. In commercial scenarios it's absolutely undesirable to have the source code always readable and especially easily alterable, even with the scenario where you have the game being operated mostly server-side. Even if the game is just for the display, if the server logic is easily replicable, there's nothing that stops bad actors to develop custom clients to gain advantages in your game and skip your "legitimate" client completely, or even using your "client shell" for their own games being operated underground, or worse, having them using the "shell renderer" Godot game to reverse-engineer the API and bypass the game client completely.
+
+GODOG adds extra tasks to those bad actors that try to take advantage of your Godot project, and also provides better ways to manage source code and build toolchains to build games (especially online titles) with or without hybrid architecture (developing client & server bundles with single source base).
 
 ---
 
@@ -258,6 +263,7 @@ func _03_(_VM_,_Bs_,_VB_,_g4_):
 However, this will NOT work by default because GODOG will try to prevent source leaks if command line arguments options aren't satisfied. This time, GODOG requires at least three parameters to export the project properly:
 
 ```sh
+# Export the project to client & server bundles.
 node node src/main.mjs /path/to/your/project /path/to/client/directory /path/to/server/directory
 ```
 
