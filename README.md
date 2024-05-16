@@ -160,8 +160,81 @@ if number == 3:
 return number
 ```
 
+GODOG also supports client & server preprocessors to help exporting hybrid client-server applications easier. Simply use `#GODOG_CLIENT` for client exports and `#GODOG_SERVER` for server exports. Take a look at this example.
+
+```gdscript
+class_name TestGdScript
+
+
+func MultiParamFunc(
+	param1: String,
+	param2: float,
+	param3: bool,
+	param4: int
+) -> Dictionary:
+	print(1 + 2)
+	#GODOG_SERVER
+	print(" this is server code. ")
+	#GODOG_SERVER
+	#GODOG_CLIENT
+	print(" this is client code. ")
+	#GODOG_CLIENT
+	#GODOG_IGNORE
+	print(" this is going to disappear. ")
+	#GODOG_IGNORE
+	print(" this is going to stay. ")
+	return {
+		MyName = "test",
+		MyParam = [
+			0,
+			1,
+			2,
+			3,
+		],
+		MyNestedParam = {
+			Person1 = "A",
+			Person2 = "B",	# This comment should disappear.
+		}
+	}
+```
+
+After exporting, this is what it looks like in a client export:
+
+```gdscript
+class_name _hX_
+
+func _03_(_VM_,_Bs_,_VB_,_g4_):
+	print(1+2)
+	print(" this is client code. ")
+	print(" this is going to stay. ")
+	return{_y3_="test",_QJ_=[0,1,2,3,],_Tg_={_UI_="A",_GO_="B",}}
+```
+
+And this is what it looks like in a server export:
+
+```gdscript
+class_name _hX_
+
+func _03_(_VM_,_Bs_,_VB_,_g4_):
+	print(1+2)
+	print(" this is server code. ")
+	print(" this is going to stay. ")
+	return{_y3_="test",_QJ_=[0,1,2,3,],_Tg_={_UI_="A",_GO_="B",}}
+```
+
+However, this will NOT work by default because GODOG will try to prevent source leaks if command line arguments options aren't satisfied. This time, GODOG requires at least three parameters to export the project properly:
+
+```sh
+node node src/main.mjs /path/to/your/project /path/to/client/directory /path/to/server/directory
+```
+
+This will now allow the project to be exporetd.
+
+
 #### 4. Ignoring files
-By default, GODOG will ignore file names that start with dot (`.`).
+By default, GODOG will ignore file names that start with dot (`.`). You can also ignore entire directory by adding a file `.gdignore` just like regular Godot. However, in case that you still want to use debug files in the development, `.gdignore` will not work.
+
+GODOG provides three ways to ignore entire directory. The first one is obviously by adding `.gdignore` to the directory, with a side effect of your editor will not recognise any files in it. Second option is by adding `godogignore` this tells Godot to see files inside, but will be ignored in the export release. Lastly, by adding `godogclient` and `godogserver`, it will also help isolating between server and client resource exports.
 
 ---
 
