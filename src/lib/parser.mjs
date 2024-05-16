@@ -312,11 +312,10 @@ export class GDParser {
                     // If it looks like index access.
                     if (tokens[i + 1] === "%") {
                         if (config) {
-                            if (!config.ignoreStringFormattings) {
-                                // Block string formattings in string paths.
-                                throw new Error(directFormatStringProhibitedErr(this.fileName));
-                            }
+                            if (config.ignoreStringFormattings) return token;
                         }
+                        // Block string formattings in string paths.
+                        throw new Error(directFormatStringProhibitedErr(this.fileName));
                     } else if (looksLikeStringPath(str)) { // Ignore string formatted string-path-like because of the false-positive probability.
                         str = this.parse(str, "path");
                     }
