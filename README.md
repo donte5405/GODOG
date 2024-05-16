@@ -16,7 +16,9 @@ Transforms your Godot 3.x project from this,
 
 ---
 
-### Still Not Ready For Production!
+### Tested, But Still Not Ready For Production!
+It's been extensively tested with 3.x projects I got hands on. More and more bugs are covered and it's still going. So far, compatible projects work flawlessly with butchered UI strings that could be fixed later with techniques described below. But I'll still not flag the project as "production-ready" yet.
+
 If you aren't afraid of it ruining your work, use it however you please, but **don't ever say that I didn't warn you**.
 
 ---
