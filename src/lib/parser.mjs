@@ -18,7 +18,7 @@ import { assemble, tokenise } from "./token.mjs";
 
 
 /** @param {string} fileName */
-const directFormatStringProhibitedErr = (fileName) => `[${fileName}]\n\nDirect string path formatting (%) isn't allowed. If the string isn't a string path, try to workaround by either adding spaces to the string if possible, or using 'str(...) to format strings instead. Noting that it'll never work if you're trying to workaround file path string formattings, that will only make it worse or outright corrupting the entire project.\n\nUnless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\n\nRead docs for more info.\n\n`;
+const directFormatStringProhibitedErr = (fileName) => `[${fileName}]\n\nDirect string path formatting (%) isn't allowed. If the string isn't a string path, try to workaround by either adding spaces to the string if possible, or using 'str(...)' to format strings instead. Noting that it'll never work if you're trying to workaround file path string formattings, that will only make it worse or outright corrupting the entire project.\n\nUnless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\n\nRead docs for more info.\n\n`;
 
 
 /** @type {string[]} User-defined GDScript types. */
