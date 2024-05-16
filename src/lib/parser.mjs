@@ -5,7 +5,7 @@ import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
 import { crucialPreprocessorBlocks } from "./preprocessor.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
-import { asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
+import { asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, looksLikeStringFormattedFileAddress, looksLikeStringFormattedPath, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
@@ -35,6 +35,19 @@ const myBannedLabels = [];
 
 /** @type {Configuration?} Configuration that will be used. */
 let config;
+
+
+/**
+ * @param {Configuration?} config 
+ */
+function checkStringFormatIgnore(config) {
+    if (config) {
+        if (!config.ignoreStringFormattings) {
+            // Block string formattings in string paths.
+            throw new Error(directFormatStringProhibitedErr(this.fileName));
+        }
+    }
+}
 
 
 /**
@@ -308,17 +321,16 @@ export class GDParser {
                 if (hasTranslations(str)) {
                     // If it has translation strings.
                     str = parseTranslations(str);
-                } else if (looksLikeStringPath(str, true)) {
-                    // If it looks like index access.
-                    if (tokens[i + 1] === "%") {
-                        if (config) {
-                            if (config.ignoreStringFormattings) return token;
+                } else if ((looksLikeStringFormattedPath(str) || looksLikeStringFormattedFileAddress(str)) && tokens[i + 1] === "%") {
+                    if (config) {
+                        if (!config.ignoreStringFormattings) {
+                            // Block string formattings in string paths.
+                            throw new Error(directFormatStringProhibitedErr(this.fileName));
                         }
-                        // Block string formattings in string paths.
-                        throw new Error(directFormatStringProhibitedErr(this.fileName));
-                    } else if (looksLikeStringPath(str)) { // Ignore string formatted string-path-like because of the false-positive probability.
-                        str = this.parse(str, "path");
                     }
+                } else if (looksLikeStringPath(str)) {
+                    // If it looks like index access.
+                    str = this.parse(str, "path");
                 }
                 str = JSON.stringify(str);
                 if (mode === "tscn") {

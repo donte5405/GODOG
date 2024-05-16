@@ -172,3 +172,21 @@ export function looksLikeStringPath(str, includeFormatting = false) {
     }
     return true;
 }
+
+
+/**
+ * If specified string is likely a string formatted path that's used for label references.
+ * @param {string} str 
+ */
+export function looksLikeStringFormattedPath(str) {
+    return looksLikeStringPath(str, true);
+}
+
+
+/**
+ * If specified string is a string formatted file path
+ * @param {string} str 
+ */
+export function looksLikeStringFormattedFileAddress(str) {
+    return str.includes("://") && str.includes("%");
+}
