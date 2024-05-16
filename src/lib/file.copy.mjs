@@ -14,7 +14,7 @@ const fsOptions = { recursive: true, force: true };
  * @param {string[]} excludeDirsWithFiles 
  * @param {string[]} ignoredFiles
  */
-export async function filesCopySelectively(source, destination, excludeDirsWithFiles = [ ".gdignore" ], ignoredFiles = []) {
+export async function filesCopySelectively(source, destination, excludeDirsWithFiles = [ ".gdignore", "godogignore" ], ignoredFiles = []) {
 	for (const sourceDir of [ source, ...dirList(source, excludeDirsWithFiles)]) {
 		const destDir = join(destination, convertToRelativePath(source, sourceDir));
 		await mkdir(destDir, fsOptions);
