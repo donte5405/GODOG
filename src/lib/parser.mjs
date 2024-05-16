@@ -296,13 +296,6 @@ export class GDParser {
                         return token; // Prevent game name to be changed (crucial, because Godot references this for file saving).
                     }
                 }
-                if (tokens[i + 1] === "%") {
-                    if (config) {
-                        if (!config.ignoreStringFormattings) {
-                            throw new Error(`[${this.fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game only supports English.`);
-                        }
-                    }
-                }
                 let str = formatStringQuote(token);
                 if (mode === "tscn") {
                     str = toStandardJson(str);
@@ -313,6 +306,14 @@ export class GDParser {
                     str = parseTranslations(str);
                 } else if (looksLikeStringPath(str)) {
                     // If it looks like index access.
+                    if (tokens[i + 1] === "%") {
+                        // Block string formattings in string paths.
+                        if (config) {
+                            if (!config.ignoreStringFormattings) {
+                                throw new Error(`[${this.fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game only supports English.`);
+                            }
+                        }
+                    }
                     if (isLabel(str) && this.privateLabels[str]) {
                         // If it's single label, allow private labels.
                         str = this.privateLabels[str];
