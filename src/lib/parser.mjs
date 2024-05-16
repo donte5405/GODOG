@@ -314,7 +314,7 @@ export class GDParser {
                             }
                         }
                     }
-                    if (isLabel(str) && this.privateLabels[str]) {
+                    if (isLabel(str) && !bannedLabels.includes(str) && this.privateLabels[str]) {
                         // If it's single label, allow private labels.
                         str = this.privateLabels[str];
                     } else {
