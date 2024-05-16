@@ -313,10 +313,10 @@ export class GDParser {
                                 throw new Error(`[${this.fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game only supports English.`);
                             }
                         }
-                    }
-                    if (isLabel(str) && !bannedLabels.includes(str) && this.privateLabels[str]) {
-                        // If it's single label, allow private labels.
-                        str = this.privateLabels[str];
+                    // }
+                    // if (isLabel(str) && !bannedLabels.includes(str) && this.privateLabels[str]) {
+                    //     // If it's single label, allow private labels. DISABLED since it caused nasty bugs.
+                    //     str = this.privateLabels[str];
                     } else {
                         // If it seems to be a NodePath or others.
                         str = this.parse(str, "path");

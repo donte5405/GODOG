@@ -165,7 +165,7 @@ You don't need to add private labels for function parameters and local variables
 #GODOG_PRIVATE:_velocity
 ```
 
-*WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that. Also, for string paths with single label, GODOG will always use private labels first. If you're accessing parameters with `["string_name"]` syntax use `.` accessor instead, or simply try to write code with "suggested" name styles to avoid the issue as much as it's realistically possible.*
+*WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that.*
 
 
 #### 3. Labels Ignore
