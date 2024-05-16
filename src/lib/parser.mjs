@@ -111,6 +111,8 @@ function removeTypeCasting(token, tokens, i) {
 export class GDParser {
     /** For detecting local vars in the scoped (inner) class indentation. */
     currentClassIndent = 0;
+    /** @type {Record<string,string>} Explicitly defined user labels. */
+    userPrivateLabels = {};
     /** @type {Record<string,string>} Private labels. */
     privateLabels = {};
     /** Filename that the parser is handling. Does nothing except warning users. */
@@ -194,9 +196,12 @@ export class GDParser {
      * Get a private label mapped to the specified source label.
      * @param {string} sourceLabel 
      */
-    _getOrAddPrivateLabel(sourceLabel) {
+    _getOrAddPrivateLabel(sourceLabel, fromUser = false) {
         if (!this.privateLabels[sourceLabel]) {
             this.privateLabels[sourceLabel] = labels.get();
+            if (fromUser) {
+                this.userPrivateLabels[sourceLabel] = this.privateLabels[sourceLabel];
+            }
         }
         return this.privateLabels[sourceLabel];
     }
@@ -261,7 +266,7 @@ export class GDParser {
                         // Define private labels.
                         const privateLabels = tokenNsp.split("#GODOG_PRIVATE:")[1].split(",");
                         for (const privateLabel of privateLabels) {
-                            this._getOrAddPrivateLabel(privateLabel);
+                            this._getOrAddPrivateLabel(privateLabel, true);
                         }
                         // Remove comment.
                         return "";
@@ -417,6 +422,10 @@ export class GDParser {
                 return removeTypeCasting(token, tokens, i);
             }
             if (this.privateLabels[token]) {
+                // Don't use private labels with target types that aren't explicitly defined by the user.
+                if (!this.userPrivateLabels[token] && [ "extends", "class_name", "const", "enum", "signal", "func" ].includes(tokens[i - 1])) {
+                    return labels.get(token);
+                }
                 // Replace private token with new token.
                 if (tokens[i - 1] === ".") return labels.get(token);
                 return this.privateLabels[token];
