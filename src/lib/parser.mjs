@@ -233,7 +233,6 @@ export class GDParser {
                     if (tokenNsp.indexOf("#GODOG_IGNORE") === 0) {
                         // Ignore code blocks that aren't required.
                         this.isInIgnoreBlock = !this.isInIgnoreBlock;
-                        tokens[i + 1] = ""; // also remove the line break behind it.
                         return "";
                     }
                     if (tokenNsp.indexOf("#GODOG_LABEL:") === 0) {
