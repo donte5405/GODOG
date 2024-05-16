@@ -149,7 +149,23 @@ You don't need to add private labels for function parameters and local variables
 *WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that. Also, for string paths with single label, GODOG will always use private labels first. If you're accessing parameters with `["string_name"]` syntax use `.` accessor instead, or simply try to write code with "suggested" name styles to avoid the issue as much as it's realistically possible.*
 
 
-#### 3. Preprocessors
+#### 3. Labels Ignore
+Sometimes you still want 'some' labels to be exposed and be used by other toolings, or simply wanting the game to have modding support without exposing everything in the game for both source compactness and especially more refined way to isolate APIs between ones with modding support (+stable and predictable environment) and others that you want to make changes freely with less worrying about breaking user's mods.
+
+GODOG provides `#GODOG_API` for this purpose. It also supports multiple names in a same line.
+
+
+```gdscript
+class_name GameAPI
+#GODOG_API: GameAPI
+
+#GODOG_API: query_nodes, query_name
+function query_nodes(query_name: String) -> Array:
+	# Entire leftover source code that could be vaguely
+	# represented since GODOG will conitnue to buther them.
+```
+
+#### 4. Preprocessors
 This helps removing code blocks that don't need to be exported in the production releases, like debug blocks and tests.
 
 Simply use `#GODOG_IGNORE` between lines to tell GODOG to ignore lines inside the block:
@@ -234,7 +250,7 @@ node node src/main.mjs /path/to/your/project /path/to/client/directory /path/to/
 This will now allow the project to be exporetd.
 
 
-#### 4. Ignoring files
+#### 5. Ignoring files
 By default, GODOG will ignore file names that start with dot (`.`). You can also ignore entire directory by adding a file `.gdignore` just like regular Godot. However, in case that you still want to use debug files in the development, `.gdignore` will not work.
 
 GODOG provides three ways to ignore entire directory. The first one is obviously by adding `.gdignore` to the directory, with a side effect of your editor will not recognise any files in it. Second option is by adding `godogignore` this tells Godot to see files inside, but will be ignored in the export release. Lastly, by adding `godogclient` and `godogserver`, it will also help isolating between server and client resource exports.
@@ -492,7 +508,6 @@ _trCharacterIcon.texture = load(tr("PathDefaultCharacterIcon"))
 - Only works with Godot 3.x at the moment.
 - GDScript is the only supported scripting langauge.
 - Built-in scripts are NOT supported (may implement it later).
-- Options to ignore some crucial strings are not implemented yet.
 - **Resource mapping with string formatting will not work!**
 	(Example: `"res://scn/scn_game_%d.tscn" % index`, `"Path/To/My/Node%d" % index`)
 - **It loves destroying GUI strings. To avoid the issue, store readable strings in translation files instead.**
