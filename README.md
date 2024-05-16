@@ -95,7 +95,7 @@ Then write the file in JSON fashion as usual.
 ```js
 {
     "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
-    "removeTypeCasting": false // This tells GODOG to also remove type castings.
+    "removeTypeCasting": false, // This tells GODOG to also remove type castings.
     "ignoreStringFormattings": false, // This tells if GODOG will ignore direct string formattings.
     "ignoreCrucialPreprocessors": false // This will tell GODOG to skip crucial preprocessors completely.
 }
