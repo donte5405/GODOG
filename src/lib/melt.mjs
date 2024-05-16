@@ -122,12 +122,14 @@ export async function meltDirectory(rootPath, labels) {
     const filePaths = fileList(rootPath);
 	Remap.rootPath = rootPath;
 	Remap.labels = labels;
+	// Search for project root.
 	for (const path of filePaths) {
         if (hasFile(PROJECT_FILE_NAME, path)) {
             rootPath = path.split(PROJECT_FILE_NAME)[0];
             break;
         }
     }
+	// Search for GDResource files.
 	for (const filePath of filePaths) {
 		const map = remap(rootPath, filePath);
 		const oldPath = map.oldPath;
