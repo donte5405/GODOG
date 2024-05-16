@@ -55,10 +55,10 @@ Clone this project, and clone/download Godot's source code from the Godot reposi
 `cd` to the root of the source code directory, then run this command:
 
 ```sh
-./godot.labels.gen.sh /path/to/the/godot/source/code/directory
+node src/labels.gen.mjs /path/to/the/godot/source/code/directory
 ```
 
-Alternatively, if you're using other OSes (such as Windows) and have Node.JS installed, this also does work:
+If you're using other OSes (such as Windows) and have Node.JS installed, this also does work:
 
 ```powershell
 node src/labels.gen.mjs C:\path\to\godot\source\code\directory
@@ -72,10 +72,10 @@ It will start generating possible Godot labels the best effort it can, this need
 To start converting the project into a scrambled one, run the command below:
 
 ```sh
-./godog.sh /path/to/your/project /path/to/target/directory
+node src/main.mjs /path/to/your/project /path/to/target/directory
 ```
 
-Alternatively, if you're using other OSes (such as Windows) and have Node.JS installed, this also does work:
+If you're using other OSes (such as Windows) and have Node.JS installed, this also does work:
 
 ```powershell
 node src/main.mjs C:\path\to\your\project C:\path\to\target\directory
