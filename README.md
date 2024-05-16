@@ -69,6 +69,19 @@ It will start generating possible Godot labels the best effort it can, this need
 ---
 
 ### Using GODOG
+It's better to make sure that your project is compatible with GODOG, simply run the command below:
+
+```sh
+# Dry Run.
+node src/main.mjs /path/to/your/project
+```
+
+If you're using other OSes (such as Windows) and have Node.JS installed, this also does work:
+
+```powershell
+node src/main.mjs C:\path\to\your\project
+```
+
 To start converting the project into a scrambled one, run the command below:
 
 ```sh

@@ -16,25 +16,15 @@ import { randomUUID } from "crypto";
 import { meltDirectory } from "./lib/melt.mjs";
 
 
-if (!process.argv[2] || !process.argv[3]) {
-    throw new Error("Project location/destination must be specified");
+if (!process.argv[2]) {
+    throw new Error("Project location must be specified");
 }
 
 
-const fsOptions = { recursive: true, force: true };
+// Set & check for project main directory location.
 const dirLocation = resolve(process.argv[2]);
-const tempLocation = dirLocation + "-" + randomUUID();
-const translationLocation = join(tempLocation, "/tr");
-const dirOutLocation = resolve(process.argv[3]);
-const dirOutServerLocation = process.argv[4] ? resolve(process.argv[4]) : "";
-
-
 if (!existsSync(dirLocation)) {
     throw new Error("Project source directory invalid.");
-}
-
-if (!existsSync(dirOutLocation)) {
-    throw new Error("Project destination directory invalid.");
 }
 
 
@@ -44,8 +34,55 @@ const config = await loadConfig(dirLocation);
 parserSetConfig(config);
 
 
-// Get all Godot labels.
-console.log("Getting Godot labels...");
+// Dry run.
+const isDryRun = !process.argv[3];
+console.log("Analysing the entire project...");
+for (const fileLocation of fileList(dirLocation)) {
+    if (checkFileExtension(fileLocation, "gd")) {
+        // Check GDScripts.
+        await GDParser.parseFile(fileLocation);
+    } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
+        // Check GDResources.
+        await GDParser.parseFile(fileLocation, "tscn");
+    } else if (checkFileExtension(fileLocation, "csv")) {
+        // Check CSV.
+        parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" }));
+    }
+}
+
+
+// If crucial preprocessors are detected while exporting without server, STOP.
+const dirOutServerLocation = process.argv[4] ? resolve(process.argv[4]) : "";
+if (!dirOutServerLocation && config.crucialPreprocessorsDetected && !config.ignoreCrucialPreprocessors) {
+    if (isDryRun) {
+        console.log("Tests passed, but the project seems to have special client-server preprocessors.");
+        console.log("Only client-server exports will be supported for this project.");
+        process.exit(0);
+    } else {
+        console.error("Crucial preprocessors detected (client & server preprocessors) but no server directory indicated.");
+        console.error("GODOG will NOT allow client-only exports if client-server preprocessors are detected to prevent source code leak.");
+        console.error("Failed to export the project.");
+        process.exit(1);
+    }
+}
+
+
+if (isDryRun) {
+    console.log("Tests passed, your project seems to be fully compatible with GODOG!");
+    process.exit(0);
+}
+
+
+// Prepare other variables.
+const fsOptions = { recursive: true, force: true };
+const tempLocation = dirLocation + "-" + randomUUID();
+const translationLocation = join(tempLocation, "/tr");
+const dirOutLocation = resolve(process.argv[3]);
+
+
+if (!existsSync(dirOutLocation)) {
+    throw new Error("Project destination directory invalid.");
+}
 
 
 // Creating a new temp directory.
@@ -62,22 +99,6 @@ await filesCopySelectively(dirLocation, tempLocation);
 // Note all files in the temp directory.
 console.log("Listing all files...");
 const tempLocationFiles = fileList(tempLocation);
-
-
-// Dry run.
-console.log("ANALysing the entire project...");
-for (const fileLocation of tempLocationFiles) {
-    if (checkFileExtension(fileLocation, "gd")) {
-        // Check GDScripts.
-        await GDParser.parseFile(fileLocation);
-    } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
-        // Check GDResources.
-        await GDParser.parseFile(fileLocation, "tscn");
-    } else if (checkFileExtension(fileLocation, "csv")) {
-        // Check CSV.
-        parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" }));
-    }
-}
 
 
 // Compress labels length.
@@ -141,10 +162,6 @@ if (dirOutServerLocation) { // Export server version.
     }
     // Delete temp directory.
     await rm(tempLocation, fsOptions);
-} else if (config.crucialPreprocessorsDetected && !config.ignoreCrucialPreprocessors) { // If crucial preprocessors are detected while exporting normally, STOP.
-    // Delete temp directory.
-    await rm(tempLocation, fsOptions);
-    throw new Error("Crucial preprocessors detected (client & server preprocessors) but no server directory indicated.\n\nGODOG will NOT allow client-only exports if client-server preprocessors are detected to prevent source code leak.\n\nFailed to export the project.");
 } else { // Export standalone version.
     // Melt project.
     if (config.meltEnabled) {
