@@ -159,13 +159,14 @@ export function toGodotJson(json) {
  * If specified string is likely a string path that's used for label references.
  * @param {string} str 
  */
-export function looksLikeStringPath(str) {
+export function looksLikeStringPath(str, includeFormatting = false) {
     if (!str) return false;
     // Test if it's not protocol path.
     if (str.includes("://")) return false;
     if (str.indexOf("./") === 0) return false;
     // Deep test.
     for (let i = 0; i < str.length; i++) {
+        if (includeFormatting && str[i] === "%") continue;
         if (allowedIndexedCharacters.includes(str[i])) continue;
         return false;
     }

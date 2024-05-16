@@ -17,6 +17,10 @@ import { assemble, tokenise } from "./token.mjs";
 // const testPath = join(dirname(__filename), "../", "../", "/TEST");
 
 
+/** @param {string} fileName */
+const directFormatStringProhibitedErr = (fileName) => `[${fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game only supports English.`
+
+
 /** @type {string[]} User-defined GDScript types. */
 const gdScriptUserTypes = [];
 
@@ -304,21 +308,17 @@ export class GDParser {
                 if (hasTranslations(str)) {
                     // If it has translation strings.
                     str = parseTranslations(str);
-                } else if (looksLikeStringPath(str)) {
+                } else if (looksLikeStringPath(str, true)) {
                     // If it looks like index access.
                     if (tokens[i + 1] === "%") {
-                        // Block string formattings in string paths.
                         if (config) {
                             if (!config.ignoreStringFormattings) {
-                                throw new Error(`[${this.fileName}] Direct string formatting (%) isn't allowed. Unless you absolutely know what you're doing, disable this option with 'ignoreStringFormattings'.\nTo avoid this issue, use CSV translation tables even if the game only supports English.`);
+                                // Block string formattings in string paths.
+                                throw new Error(directFormatStringProhibitedErr(this.fileName));
                             }
                         }
-                    // }
-                    // if (isLabel(str) && !bannedLabels.includes(str) && this.privateLabels[str]) {
-                    //     // If it's single label, allow private labels. DISABLED since it caused nasty bugs.
-                    //     str = this.privateLabels[str];
                     } else {
-                        // If it seems to be a NodePath or others.
+                        // If it looks like index access.
                         str = this.parse(str, "path");
                     }
                 }
