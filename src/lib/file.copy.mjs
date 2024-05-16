@@ -18,7 +18,7 @@ export async function filesCopySelectively(source, destination, excludeDirsWithF
 	for (const sourceDir of dirList(source, excludeDirsWithFiles)) {
 		const destDir = join(destination, convertToRelativePath(source, sourceDir));
 		await mkdir(destDir, fsOptions);
-		for (const sourceFile of fileList(sourceDir, ignoredFiles)) {
+		for (const sourceFile of fileList(sourceDir, excludeDirsWithFiles, ignoredFiles)) {
 			const destFile = join(destination, convertToRelativePath(source, sourceFile));
 			await cp(sourceFile, destFile, fsOptions);
 		}
