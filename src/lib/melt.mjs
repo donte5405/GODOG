@@ -164,5 +164,4 @@ export async function meltDirectory(rootPath, labels) {
     }
 	// Clear empty directories.
     cleanEmptyFoldersRecursively(rootPath);
-	await writeFile("./TEST.json", JSON.stringify(allRemaps, null, "\t"));
 }
