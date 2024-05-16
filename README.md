@@ -314,6 +314,8 @@ var json := {
 json["@player_info"]["@player_name"]
 ```
 
+Another way around this is also by using `#GODOG_API`, however this feature will expose the label "everywhere" instead of just a confined space. Learn how to use "wrong" name styles below to mitigate it.
+
 Noting that this way, your game's code will become easier to read when getting decompiled in the end, but nothing could be done in this case (except if you utilise translations tables, see below). If this must be used on a server API, it also must be smart enough to filter the extra characters added into the serialised JSON, as it will be explained below.
 
 ---
