@@ -5,7 +5,7 @@ import { join, resolve } from "path";
 import { fileList } from "./lib/file.list.mjs";
 import { labels } from "./lib/labels.mjs";
 import { shuffleArray } from "./lib/shuffle.mjs";
-import { GDParser, parserSetConfig } from "./lib/parser.mjs";
+import { GDParser } from "./lib/parser.mjs";
 import { checkFileExtension } from "./lib/strings.mjs";
 import { loadConfig } from "./lib/options.mjs";
 import { flushTranslations, translations } from "./lib/locale.mjs";
@@ -31,7 +31,6 @@ if (!existsSync(dirLocation)) {
 // Get project config.
 console.log("Loading project config...");
 const config = await loadConfig(dirLocation);
-parserSetConfig(config);
 
 
 // Dry run.

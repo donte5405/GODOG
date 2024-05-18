@@ -1,6 +1,6 @@
 //@ts-check
 import { readFile } from "fs/promises";
-import { Configuration } from "./options.mjs";
+import { Configuration, getConfig } from "./options.mjs";
 import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
 import { crucialPreprocessorBlocks } from "./preprocessor.mjs";
@@ -33,23 +33,6 @@ const bannedLabels = await loadGodotLabels();
 const myBannedLabels = [];
 
 
-/** @type {Configuration?} Configuration that will be used. */
-let config;
-
-
-/**
- * @param {Configuration?} config 
- */
-function checkStringFormatIgnore(config) {
-    if (config) {
-        if (!config.ignoreStringFormattings) {
-            // Block string formattings in string paths.
-            throw new Error(directFormatStringProhibitedErr(this.fileName));
-        }
-    }
-}
-
-
 /**
  * Find current line amount of indents.
  * @param {string[]} tokens 
@@ -77,24 +60,13 @@ function hasIndentAtItsFront(tokens, i) {
 
 
 /**
- * Set configuration blob for this parser module.
- * @param {Configuration} c 
- */
-export function parserSetConfig(c) {
-    config = c;
-}
-
-
-/**
  * @param {string} token
  * @param {string[]} tokens 
  * @param {number} i 
  */
 function removeTypeCasting(token, tokens, i) {
-    if (config) {
-        // If type casting shouldn't be bothered, skip.
-        if (!config.removeTypeCasting) return token;
-    }
+    // If type casting shouldn't be bothered, skip.
+    if (!getConfig().removeTypeCasting) return token;
     if (tokens[i - 1] === ":" && [ "=", ",", ")", "\n" ].includes(tokens[i + 1])) {
         let bracesStack = 0;
         for (let ii = i - 4; ii > 0; ii--) {
@@ -240,6 +212,9 @@ export class GDParser {
         // Ignore empty lines.
         if (!token) return "";
 
+        // Get config.
+        const config = getConfig();
+
         // Process symbols.
         if (asciiSymbols.includes(token[0])) {
             // For GDScript only.
@@ -249,9 +224,7 @@ export class GDParser {
                     const tokenNsp = token.split(" ").join("");
                     for (const block of crucialPreprocessorBlocks) {
                         if (tokenNsp.indexOf(block) === 0) {
-                            if (config) {
-                                config.crucialPreprocessorsDetected = true;
-                            }
+                            config.crucialPreprocessorsDetected = true;
                             // Keep the comment for now, will use platform-specific preprocessors.
                             return token;
                         }
@@ -297,10 +270,8 @@ export class GDParser {
                 }
                 // Remove inferred type casting.
                 if (token === ":=") {
-                    if (config) {
-                        if (config.removeTypeCasting) {
-                            return "=";
-                        }
+                    if (config.removeTypeCasting) {
+                        return "=";
                     }
                     return token;
                 }
@@ -322,11 +293,9 @@ export class GDParser {
                     // If it has translation strings.
                     str = parseTranslations(str);
                 } else if ((looksLikeStringFormattedPath(str) || looksLikeStringFormattedFileAddress(str)) && tokens[i + 1] === "%") {
-                    if (config) {
-                        if (!config.ignoreStringFormattings) {
-                            // Block string formattings in string paths.
-                            throw new Error(directFormatStringProhibitedErr(this.fileName));
-                        }
+                    if (!config.ignoreStringFormattings) {
+                        // Block string formattings in string paths.
+                        throw new Error(directFormatStringProhibitedErr(this.fileName));
                     }
                 } else if (looksLikeStringPath(str)) {
                     // If it looks like index access.

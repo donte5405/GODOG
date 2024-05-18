@@ -36,6 +36,10 @@ export class Configuration {
 }
 
 
+/** @type {Configuration} Currently active config. */
+let config;
+
+
 /**
  * Load configuration blob.
  * @param {string} projectPath 
@@ -45,5 +49,15 @@ export async function loadConfig(projectPath) {
     if (!existsSync(configPath)) {
         await writeFile(configPath, "{}");
     }
-    return new Configuration(JSON.parse(await readFile(configPath, {encoding: "utf-8"})));
+    config = new Configuration(JSON.parse(await readFile(configPath, {encoding: "utf-8"})));
+    return config;
+}
+
+
+/** Get currently active config. */
+export function getConfig() {
+    if (!config) {
+        throw new Error("Developer's fault detected, configuration not loaded yet.");
+    }
+    return config;
 }
