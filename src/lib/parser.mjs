@@ -433,12 +433,15 @@ export class GDParser {
                 return removeTypeCasting(token, tokens, i);
             }
             if (this.privateLabels[token]) {
-                // Don't use private labels with target types that aren't explicitly defined by the user.
-                if (!this.userPrivateLabels[token] && [ "extends", "class_name", "const", "enum", "signal", "func" ].includes(tokens[i - 1])) {
+                // Replace private token with new token.
+                if ([ "extends", "class_name", "const", "enum", "signal", "func" ].includes(tokens[i - 1])) {
+                    // Don't use private labels with target types that aren't explicitly defined by the user.
+                    if (!this.userPrivateLabels[token] )return labels.get(token);
+                }
+                if (tokens[i - 1] === ".") {
+                    // Don't use private labels with an accessor.
                     return labels.get(token);
                 }
-                // Replace private token with new token.
-                if (tokens[i - 1] === ".") return labels.get(token);
                 return this.privateLabels[token];
             }
             if (gdScriptUserTypes.includes(token)) {
