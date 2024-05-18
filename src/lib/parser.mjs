@@ -5,7 +5,7 @@ import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
 import { crucialPreprocessorBlocks } from "./preprocessor.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
-import { asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, looksLikeStringFormattedFileAddress, looksLikeStringFormattedPath, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
+import { asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, jsonStringParse, jsonStringStringify, looksLikeStringFormattedFileAddress, looksLikeStringFormattedPath, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
@@ -284,11 +284,7 @@ export class GDParser {
                         return token; // Prevent game name to be changed (crucial, because Godot references this for file saving).
                     }
                 }
-                let str = formatStringQuote(token);
-                if (mode === "tscn") {
-                    str = toStandardJson(str);
-                }
-                str = JSON.parse(str);
+                let str = jsonStringParse(token, mode === "tscn");
                 if (hasTranslations(str)) {
                     // If it has translation strings.
                     str = parseTranslations(str);
@@ -301,11 +297,7 @@ export class GDParser {
                     // If it looks like index access.
                     str = this.parse(str, "path");
                 }
-                str = JSON.stringify(str);
-                if (mode === "tscn") {
-                    str = toGodotJson(str);
-                }
-                return str;
+                return jsonStringStringify(str, mode === "tscn");
             }
 
             // Other symbols.

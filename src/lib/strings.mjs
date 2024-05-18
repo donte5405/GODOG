@@ -139,6 +139,36 @@ export function formatStringQuote(str) {
 
 
 /**
+ * Parse JSON-encoded string into a string.
+ * @param {string} str 
+ * @param {boolean} fromGodot If this string is from GDResource files (such as TSCN/TRES).
+ * @returns {string}
+ */
+export function jsonStringParse(str, fromGodot = false) {
+    if (fromGodot) {
+        str = toStandardJson(str);
+    } else {
+        str = formatStringQuote(str);
+    }
+    return JSON.parse(str);
+}
+
+
+/**
+ * Stringify specified string into JSON-encoded or GDResource-encoded string.
+ * @param {string} str 
+ * @param {boolean} toGodot If this string is going to be converted into GDResource-encoded string.
+ */
+export function jsonStringStringify(str, toGodot = false) {
+    str = JSON.stringify(str);
+    if (toGodot) {
+        str = toGodotJson(str);
+    }
+    return str;
+}
+
+
+/**
  * Convert Godot JSON string into standardisted JSON string.
  * @param {string} json 
  */
