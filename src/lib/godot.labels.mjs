@@ -4,7 +4,7 @@ import { XMLParser } from "fast-xml-parser";
 import { readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { checkFileExtension, formatStringQuote, isLabel, isString, looksLikeStringPath } from "./strings.mjs";
+import { checkFileExtension, formatStringQuote, isLabel, isString, looksLikeNodePath } from "./strings.mjs";
 import { tokenise } from "./token.mjs";
 import { existsSync } from "fs";
 
@@ -145,7 +145,7 @@ export async function huntLabels(sourcePath) {
                         } catch {
                             continue;
                         }
-                        if (!looksLikeStringPath(token)) continue;
+                        if (!looksLikeNodePath(token)) continue;
                         for (const subToken of tokenise(token, "path")) {
                             if (isLabel(subToken) && dontBan) {
                                 push(subToken);

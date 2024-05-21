@@ -29,7 +29,7 @@ export const allowedNumberSymbols = "0123456789xbe-_.";
 
 
 /** List of ASCII characters allowed in indexed strings. */
-export const allowedIndexedCharacters = "/:.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-";
+export const allowedIndexedCharacters = "/:0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-";
 
 
 /**
@@ -186,10 +186,10 @@ export function toGodotJson(json) {
 }
 
 /**
- * If specified string is likely a string path that's used for label references.
+ * If specified string is likely a Godot's node path that's used for label references.
  * @param {string} str 
  */
-export function looksLikeStringPath(str, includeFormatting = false) {
+export function looksLikeNodePath(str, includeFormatting = false) {
     if (!str) return false;
     // Test if it's not protocol path.
     if (str.includes("://")) return false;
@@ -198,6 +198,7 @@ export function looksLikeStringPath(str, includeFormatting = false) {
     for (let i = 0; i < str.length; i++) {
         if (includeFormatting && str[i] === "%") continue;
         if (allowedIndexedCharacters.includes(str[i])) continue;
+        if (str[i] === "." && "./".includes(str[i + 1])) continue;
         return false;
     }
     return true;
@@ -208,8 +209,8 @@ export function looksLikeStringPath(str, includeFormatting = false) {
  * If specified string is likely a string formatted path that's used for label references.
  * @param {string} str 
  */
-export function looksLikeStringFormattedPath(str) {
-    return looksLikeStringPath(str, true);
+export function looksLikeStringFormattedNodePath(str) {
+    return looksLikeNodePath(str, true);
 }
 
 

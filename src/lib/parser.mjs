@@ -1,11 +1,11 @@
 //@ts-check
 import { readFile } from "fs/promises";
-import { Configuration, getConfig } from "./options.mjs";
+import { getConfig } from "./options.mjs";
 import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
 import { crucialPreprocessorBlocks } from "./preprocessor.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
-import { asciiNumbers, asciiSymbols, formatStringQuote, isLabel, isString, jsonStringParse, jsonStringStringify, looksLikeStringFormattedFileAddress, looksLikeStringFormattedPath, looksLikeStringPath, toGodotJson, toStandardJson } from "./strings.mjs";
+import { asciiNumbers, asciiSymbols, isLabel, isString, jsonStringParse, jsonStringStringify, looksLikeStringFormattedFileAddress, looksLikeStringFormattedNodePath, looksLikeNodePath } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
@@ -288,12 +288,12 @@ export class GDParser {
                 if (hasTranslations(str)) {
                     // If it has translation strings.
                     str = parseTranslations(str);
-                } else if ((looksLikeStringFormattedPath(str) || looksLikeStringFormattedFileAddress(str)) && tokens[i + 1] === "%") {
+                } else if ((looksLikeStringFormattedNodePath(str) || looksLikeStringFormattedFileAddress(str)) && tokens[i + 1] === "%") {
                     if (!config.ignoreStringFormattings) {
                         // Block string formattings in string paths.
                         throw new Error(directFormatStringProhibitedErr(this.fileName));
                     }
-                } else if (looksLikeStringPath(str)) {
+                } else if (looksLikeNodePath(str)) {
                     // If it looks like index access.
                     str = this.parse(str, "path");
                 }
