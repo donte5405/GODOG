@@ -327,7 +327,7 @@ export class GDParser {
                                 throw new Error("Illegal file path declaration: " + filePath + ". GODOG doesn't allow dynamic remapping in scramble mode.");
                             }
                             if (!existsSync(filePath)) {
-                                // Make manual formatting impossible in melt mode.
+                                // Make manual string formatting impossible in melt mode.
                                 throw new Error("Project resource file not found: " + filePath + ".");
                             }
                         }
