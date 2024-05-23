@@ -1,5 +1,4 @@
 //@ts-check
-import { writeFile } from "fs/promises";
 import { allowedNumberSymbols, asciiNumbers, asciiSymbols, isLabel, isString } from "./strings.mjs";
 
 
