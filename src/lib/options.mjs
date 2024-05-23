@@ -26,8 +26,6 @@ export class Configuration {
 
     /** If project melt enabled. */
     get meltEnabled() { return this.check("scrambleGodotFiles"); }
-    /** If this is configured to ignore string formattings. */
-    get ignoreStringFormattings() { return this.check("ignoreStringFormattings"); }
     /** If type casting should be bothered. */
     get removeTypeCasting() { return this.check("removeTypeCasting"); }
     /** If this project will ignore crucial preprocessors and skip source code leak risks altogether. */

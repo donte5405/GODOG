@@ -117,7 +117,6 @@ Then write the file in JSON fashion as usual.
 {
     "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
     "removeTypeCasting": false, // This tells GODOG to also remove type castings.
-    "ignoreStringFormattings": false, // This tells if GODOG will ignore direct string formattings.
     "ignoreCrucialPreprocessors": false // This will tell GODOG to skip crucial preprocessors completely.
 }
 ```
@@ -126,8 +125,6 @@ Then write the file in JSON fashion as usual.
 Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the project's root directory.
 - `removeTypeCasting`: `boolean`
 Tells GODOG to remove type castings from your code. This can be unpreferable since this tends to break code. During type casting, Godot will also try to convert value during parameter passings to specified type. Without type casting, values may be left as-is and become especially unsafe to deal with especially with JSON objects. If you are willing to fix your code for sake of more obscure source exports, enable this option.
-- `ignoreStringFormattings`: `boolean`
-Tells if GODOG will ignore direct string formattings. **This should always be disabled unless you absolutely know what you're doing.**
 - `ignoreCrucialPreprocessors`: `boolean`
 Tells GODOG to skip crucial preprocessors completely, notably client & server preprocessors. **This should always be disabled unless you absolutely know what you're doing.**
 
