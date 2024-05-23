@@ -156,9 +156,10 @@ export async function meltDirectory(rootPath, labels) {
             str = str
                 .split(`'${oldGodotPath}'`).join(`'${newGodotPath}'`)
                 .split(`"${oldGodotPath}"`).join(`"${newGodotPath}"`)
-                .split(`'*${oldGodotPath}'`).join(`'${newGodotPath}'`)
-                .split(`"*${oldGodotPath}"`).join(`"${newGodotPath}"`)
-                .split(`\\"${oldGodotPath}\\"`).join(`\\"${newGodotPath}\\"`);
+                .split(`'*${oldGodotPath}'`).join(`'*${newGodotPath}'`)
+                .split(`"*${oldGodotPath}"`).join(`"*${newGodotPath}"`)
+                .split(`\\"${oldGodotPath}\\"`).join(`\\"${newGodotPath}\\"`)
+                .split(`\\"*${oldGodotPath}\\"`).join(`\\"*${newGodotPath}\\"`);
 		}
 		await writeFile(filePath, str);
     }
