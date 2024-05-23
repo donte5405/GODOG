@@ -31,6 +31,7 @@ if (!existsSync(dirLocation)) {
 // Get project config.
 console.log("Loading project config...");
 const config = await loadConfig(dirLocation);
+config.projDirPath = dirLocation;
 
 
 // Dry run.

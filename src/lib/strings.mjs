@@ -28,8 +28,8 @@ export const asciiNumbers = "0123456789";
 export const allowedNumberSymbols = "0123456789xbe-_.";
 
 
-/** List of ASCII characters allowed in indexed strings. */
-export const allowedIndexedCharacters = "/:0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-";
+/** List of path navigation symbols. */
+export const pathNavSymbols = [ ".", "..", ":", "/" ];
 
 
 /**
@@ -90,6 +90,7 @@ export function isLabel(str) {
     if (!str) return false;
     if (isNumber(str)) return false;
     for (let i = 0; i < str.length; i++) {
+        if (str.charCodeAt(i) > 127) return false; // Disallow non-ASCII characters.
         if (asciiSymbols.includes(str[i])) return false;
     }
     return true;
@@ -185,39 +186,116 @@ export function toGodotJson(json) {
     return json.split("\\n").join("\n").split("\\t").join("\t");
 }
 
+
+/**
+ * Check if specified string is a string format symbol.
+ * @param {string} str 
+ */
+export function isStringFormat(str) {
+    if (str[0] === "%" && "scdoxXfv".includes(str[str.length - 1])) {
+        for(let i = 1; i < str.length - 2; i++) {
+            if ("-+*.0123456789abcdefABCDEF".includes(str[i])) continue;
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+
 /**
  * If specified string is likely a Godot's node path that's used for label references.
  * @param {string} str 
  */
-export function looksLikeNodePath(str, includeFormatting = false) {
+export function looksLikeNodePath(str) {
     if (!str) return false;
     // Test if it's not protocol path.
-    if (str.includes("://")) return false;
-    if (str.indexOf("./") === 0) return false;
+    if (looksLikeProtocolPath(str)) return false;
     // Deep test.
-    for (let i = 0; i < str.length; i++) {
-        if (includeFormatting && str[i] === "%") continue;
-        if (allowedIndexedCharacters.includes(str[i])) continue;
-        if (str[i] === "." && "./".includes(str[i + 1])) continue;
-        return false;
+    for (const section of splitNodePath(str)) {
+        if (pathNavSymbols.includes(section)) continue;
+        if (isStringFormat(section)) continue;
+        for (let i = 0; i < section.length; i++) {
+            if (isLabel(section)) continue;
+            return false;
+        }
     }
     return true;
 }
 
 
 /**
- * If specified string is likely a string formatted path that's used for label references.
- * @param {string} str 
+ * @callback ProcessNodePathCallback
+ * @param {string} str
+ * @param {number} index
+ * @param {string[]} array
  */
-export function looksLikeStringFormattedNodePath(str) {
-    return looksLikeNodePath(str, true);
+
+
+/**
+ * Process NodePath and return processed string.
+ * @param {string} str 
+ * @param {ProcessNodePathCallback} func 
+ */
+export function processNodePath(str, func) {
+    const strSplit = splitNodePath(str);
+    strSplit.forEach((section, i, arr) => {
+        if (pathNavSymbols.includes(section)) return;
+        if (isStringFormat(section)) return;
+        arr[i] = func(arr[i], i, arr);
+    });
+    return strSplit.join("");
 }
 
 
 /**
- * If specified string is a string formatted file path
+ * Split NodePath (this is needed because NodePath has "/" and ":" splitters).
  * @param {string} str 
  */
-export function looksLikeStringFormattedFileAddress(str) {
-    return str.includes("://") && str.includes("%");
+export function splitNodePath(str) {
+    /** @type {string[]} */
+    const processed = [];
+    let buffer = "";
+    const submitBuffer = () => {
+        if (buffer) {
+            processed.push(buffer);
+            buffer = "";
+        }
+    };
+    str.split("").forEach((val) => {
+        if ("/:".includes(val)) {
+            submitBuffer();
+            processed.push(val);
+        } else {
+            buffer += val;
+        }
+    });
+    submitBuffer();
+    return processed;
+}
+
+                    
+/**
+ * If specified string is likely a file string path that's used for label references.
+ * @param {string} str 
+ */
+export function looksLikeProtocolPath(str) {
+    return str.includes("://") || (str.indexOf("./") === 0);
+}
+
+
+/**
+ * Get path's protocol and path.
+ * @param {string} str
+ * @returns {[string, string]} 
+ */
+export function getProtocolAndPath(str) {
+    if (str.indexOf("./") === 0) {
+        const strSplit = str.split("./");
+        if (strSplit.length !== 2) return [ "", "" ];
+        return [ ".", strSplit[1] ];
+    }
+    const strSplit = str.split("://");
+    if (strSplit.length !== 2) return [ "", "" ];
+    return [ strSplit[0], strSplit[1] ];
 }

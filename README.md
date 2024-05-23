@@ -173,14 +173,14 @@ You don't need to add private labels for function parameters and local variables
 #### 3. Labels Ignore
 Sometimes you still want "some" labels to be exposed and be used by other toolings, or simply wanting the game to have modding support without exposing everything in the game for both source compactness and especially more refined way to isolate APIs between ones with modding support (+stable and predictable environment) and others that you want to make changes freely with less worrying about breaking user's mods.
 
-GODOG provides `#GODOG_API` for this purpose. It also supports multiple names in a same line.
+GODOG provides `#GODOG_EXPOSE` for this purpose. It also supports multiple names in a same line.
 
 
 ```gdscript
 class_name GameAPI
-#GODOG_API: GameAPI
+#GODOG_EXPOSE: GameAPI
 
-#GODOG_API: query_nodes, query_name
+#GODOG_EXPOSE: query_nodes, query_name
 function query_nodes(query_name: String) -> Array:
 	# Entire leftover source code that could be vaguely
 	# represented since GODOG will conitnue to buther them.
@@ -336,7 +336,7 @@ var json := {
 json["@player_info"]["@player_name"]
 ```
 
-Another way around this is also by using `#GODOG_API`, however this feature will expose the label "everywhere" instead of just a confined space. Learn how to use "wrong" name styles below to mitigate it.
+Another way around this is also by using `#GODOG_EXPOSE`, however this feature will expose the label "everywhere" instead of just a confined space. Learn how to use "wrong" name styles below to mitigate it.
 
 Noting that this way, your game's code will become easier to read when getting decompiled in the end, but nothing could be done in this case (except if you utilise translations tables, see below). If this must be used on a server API, it also must be smart enough to filter the extra characters added into the serialised JSON, as it will be explained below.
 

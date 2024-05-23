@@ -13,6 +13,9 @@ export class Configuration {
     /** @type {Record<string,string>} */
     data = {};
 
+    /** Project's directory path. */
+    projDirPath = "";
+
     /**
      * Check if specified key exists in either process arguments or the configuration file.
      * @param {string} key 

@@ -1,11 +1,25 @@
 //@ts-check
+import { join } from "path";
+import { existsSync } from "fs";
 import { readFile } from "fs/promises";
 import { getConfig } from "./options.mjs";
 import { loadGodotLabels } from "./godot.labels.mjs";
 import { labels } from "./labels.mjs";
 import { crucialPreprocessorBlocks } from "./preprocessor.mjs";
 import { hasTranslations, parseTranslations } from "./locale.mjs";
-import { asciiNumbers, asciiSymbols, isLabel, isString, jsonStringParse, jsonStringStringify, looksLikeStringFormattedFileAddress, looksLikeStringFormattedNodePath, looksLikeNodePath } from "./strings.mjs";
+import {
+    asciiNumbers,
+    asciiSymbols,
+    isLabel,
+    isString,
+    jsonStringParse,
+    jsonStringStringify,
+    looksLikeNodePath,
+    looksLikeProtocolPath,
+    getProtocolAndPath, 
+    checkFileExtension,
+    processNodePath,
+} from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
@@ -229,9 +243,9 @@ export class GDParser {
                             return token;
                         }
                     }
-                    if (tokenNsp.indexOf("#GODOG_API:") === 0) {
+                    if (tokenNsp.indexOf("#GODOG_EXPOSE:") === 0) {
                         // Ban a label to make it readable in the final release.
-                        const newBannedLabels = tokenNsp.split("#GODOG_API:")[1].split(",");
+                        const newBannedLabels = tokenNsp.split("#GODOG_EXPOSE:")[1].split(",");
                         for (const label of newBannedLabels) {
                             myBannedLabels.push(label);
                             bannedLabels.push(label);
@@ -279,7 +293,25 @@ export class GDParser {
 
             // Parse user-defined strings.
             if (isString(token)) {
-                if (mode === "tscn") {
+                if (mode === "gd") {
+                    // TODO: support string formatting if possible.
+                    if (tokens[i + 1] === "." && tokens[i + 2] === "format" && tokens[i + 3] === "(") {
+                        throw new Error("It looks like you're trying to use placeholder-based string formatting with " + token + ". It's not supported by GODOG yet.");
+                    }
+                    // Avoid RegEx possibilities.
+                    if (tokens[i - 3] === "." && tokens[i - 2] === "compile" && tokens[i - 1] === "(") {
+                        return token;
+                    }
+                    if (tokens[i - 3] === "." && tokens[i - 2] === "search" && tokens[i - 1] === "(") {
+                        return token;
+                    }
+                    if (tokens[i - 3] === "." && tokens[i - 2] === "search_all" && tokens[i - 1] === "(") {
+                        return token;
+                    }
+                    if (tokens[i - 5] === "." && tokens[i - 4] === "sub" && tokens[i - 3] === "(" && isString(tokens[i - 1]) && tokens[i - 2] === ",") {
+                        return token;
+                    }
+                } else if (mode === "tscn") {
                     if (tokens[i - 8] === "application" && tokens[i - 4] === "config" && tokens[i - 3] === "/" && tokens[i - 2] === "name" && tokens[i - 1] === "=") {
                         return token; // Prevent game name to be changed (crucial, because Godot references this for file saving).
                     }
@@ -288,14 +320,26 @@ export class GDParser {
                 if (hasTranslations(str)) {
                     // If it has translation strings.
                     str = parseTranslations(str);
-                } else if ((looksLikeStringFormattedNodePath(str) || looksLikeStringFormattedFileAddress(str)) && tokens[i + 1] === "%") {
-                    if (!config.ignoreStringFormattings) {
-                        // Block string formattings in string paths.
-                        throw new Error(directFormatStringProhibitedErr(this.fileName));
+                } else if (looksLikeProtocolPath(str)) {
+                    // If it looks like protocol path, ignore most of them.
+                    const [ pathProtocol, path ] = getProtocolAndPath(str);
+                    if (pathProtocol === "res") {
+                        if (!getConfig().meltEnabled) return token;
+                        const filePath = join(getConfig().projDirPath, path);
+                        if (checkFileExtension(filePath, [ "tscn", "tres", "gd" ])) {
+                            if (filePath.indexOf("%") >= 0) {
+                                throw new Error("Illegal file path declaration: " + filePath + ". GODOG doesn't allow dynamic remapping in scramble mode.");
+                            }
+                            if (!existsSync(filePath)) {
+                                // Make manual formatting impossible in melt mode.
+                                throw new Error("Project resource file not found: " + filePath + ".");
+                            }
+                        }
                     }
+                    return token;
                 } else if (looksLikeNodePath(str)) {
-                    // If it looks like index access.
-                    str = this.parse(str, "path");
+                    // If it looks like node path.
+                    str = processNodePath(str, (section) => this.parse(section, "path"));
                 }
                 return jsonStringStringify(str, mode === "tscn");
             }
