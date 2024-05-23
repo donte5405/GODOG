@@ -339,6 +339,28 @@ Noting that this way, your game's code will become easier to read when getting d
 
 ---
 
+### Working With Protocol Paths (Files, URLs)
+Normally, GODOG will not interact with file paths especially if the path also contains file extensions (such as `images/icon.png`). While this generally works, if you split it up into small chunks during string processing, it'll very likely mess up the string. To avoid this issue, use string formatting to interact with file paths instead.
+
+```gdscript
+"https://sea.men/api/v3/load_player/%s" % player_name # GODOG will keep the URL intact.
+"https://sea.men/api/v3/" + "load_player" + "/" % player_name # GODOG will mess up the "load_player" label, unless it's ignored.
+
+str("https://sea.men/api/v3/load_player/", player_name) # GODOG is happy with this.
+str("https://sea.men/api/v3/", "load_player", "/", player_name) # Depending on how you want to achieve it, but this generally doesn't work out right.
+```
+
+Also, with the same princicple, it also refuses to modifly Godot's `NodePath`s with partially formatted names:
+
+```gdscript
+"/root/MyScene/Enemies/%s" % enemy_name # GODOG will help format the name.
+"/root/MyScene/Enemies/Enemy%s" % enemy_name # GODOG will IGNORE this.
+```
+
+*TLDR; Always use full protocol paths for file names in the code. If impossible, store it in translation files.*
+
+---
+
 ### Working With Game Server APIs
 Since GODOG aims at scrambling strings in Godot projects. This makes some of implementations such as API calls completely butchered. The mitigation is already explained as above. But GODOG also exports a complete JSON of "debug symbols" that can be used for remappings. It also offers bi-directional translation, which means this can be used to translate strings in both ways. To utilise it on API game servers, simply using it to convert mangled keys into readable keys. Here's an example of JavaScript-based implementation of the translator:
 
