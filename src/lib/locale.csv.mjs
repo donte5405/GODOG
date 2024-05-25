@@ -16,7 +16,7 @@ GODOG expects CSV translation to be properly quoted to ensure that texts will be
 
 ---
 
-This CSV structure will NOT be accepted by GODOG and WILL NOT be processed:
+The CSV structure below will NOT be accepted by GODOG and WILL NOT be processed:
 
 ---
 
