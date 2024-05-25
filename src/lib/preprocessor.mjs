@@ -3,6 +3,10 @@ import { assemble, tokenise } from "./token.mjs";
 import { readFile } from "fs/promises";
 
 
+/** @param {string} block */
+const errGdBlockNotClosed = (block) => new Error(`Block '${block}' not closed properly!`)
+
+
 /** List of supported preprocessor blocks. */
 export const crucialPreprocessorBlocks = [ "#GODOG_CLIENT", "#GODOG_SERVER" ];
 
@@ -38,7 +42,7 @@ export function stripGdBlock(src, block) {
 		}
 	}
 	if (stripping) {
-		throw new Error(`Block '${block}' not closed properly!`);
+		throw errGdBlockNotClosed(block);
 	}
 	return assemble(srcs);
 }

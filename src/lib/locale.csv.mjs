@@ -3,6 +3,13 @@ import { GDParser } from "./parser.mjs";
 import { formatStringQuote, isString } from "./strings.mjs";
 
 
+/**
+ * @param {string} filePath 
+ * @param {string} reason 
+ */
+const errInvalidCsv = (filePath, reason) => `The CSV string sequence${filePath ? ` of the file "${filePath}" ` : ` `}${reason}.`;
+
+
 const docLocaleCsvGuide = `
 Why is that?
 
@@ -32,7 +39,7 @@ const commonCsvSeparators = [ ",", "\t", " ", ";", ];
 
 
 function printError(reason = "", filePath = "") {
-	console.error(new Error(`The CSV string sequence${filePath ? ` of the file "${filePath}" ` : ` `}${reason}.`));
+	console.error(errInvalidCsv(reason, filePath));
 	if (guidedUsers) return;
 	guidedUsers = true;
 	console.log(docLocaleCsvGuide);

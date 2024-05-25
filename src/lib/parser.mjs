@@ -31,6 +31,16 @@ import { assemble, tokenise } from "./token.mjs";
 // const testPath = join(dirname(__filename), "../", "../", "/TEST");
 
 
+/** @param {string} token */
+const errStrFormatAdvancedUnsupported = (token) => new Error("It looks like you're trying to use placeholder-based string formatting with " + token + ". It's not supported by GODOG yet.");
+/** @param {string} filePath */
+const errGdFilePathFormatNotAllowed = (filePath) => new Error("Illegal file path declaration: " + filePath + ". GODOG doesn't allow dynamic remapping in scramble mode.");
+/** @param {string} filePath */
+const errResNotFound = (filePath) => new Error("Project resource file not found: " + filePath + ".");
+/** @param {string} filePath */
+const errIncompleteIgnoreBlock = (filePath) => new Error(`Incomplete '#GODOG_IGNORE' block in the file '${filePath}'!`); 
+
+
 /** @type {string[]} User-defined GDScript types. */
 const gdScriptUserTypes = [];
 
@@ -292,7 +302,7 @@ export class GDParser {
                 if (mode === "gd") {
                     // TODO: support string formatting if possible.
                     if (tokens[i + 1] === "." && tokens[i + 2] === "format" && tokens[i + 3] === "(") {
-                        throw new Error("It looks like you're trying to use placeholder-based string formatting with " + token + ". It's not supported by GODOG yet.");
+                        throw errStrFormatAdvancedUnsupported(token);
                     }
                     // Avoid RegEx possibilities.
                     if (tokens[i - 3] === "." && tokens[i - 2] === "compile" && tokens[i - 1] === "(") {
@@ -324,11 +334,11 @@ export class GDParser {
                         const filePath = join(getConfig().projDirPath, path);
                         if (checkFileExtension(filePath, [ "tscn", "tres", "gd" ])) {
                             if (filePath.indexOf("%") >= 0) {
-                                throw new Error("Illegal file path declaration: " + filePath + ". GODOG doesn't allow dynamic remapping in scramble mode.");
+                                throw errGdFilePathFormatNotAllowed;
                             }
                             if (!existsSync(filePath)) {
                                 // Make manual string formatting impossible in melt mode.
-                                throw new Error("Project resource file not found: " + filePath + ".");
+                                throw errResNotFound(filePath);
                             }
                         }
                     }
@@ -460,7 +470,7 @@ export class GDParser {
      */
     assemble(token, mode = this.mode) {
         if (this.isInIgnoreBlock) {
-            throw new Error(`Incomplete '#GODOG_IGNORE' block in the file '${this.fileName}'!`);
+            throw errGdFilePathFormatNotAllowed(this.fileName);
         }
         return assemble(token, mode);
     }

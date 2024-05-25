@@ -5,6 +5,9 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 
 
+const errHuman = new Error("Developer's fault detected, configuration not loaded yet.");
+
+
 export class Configuration {
     /** This is for internal use, indicates if any of crucial preprocessors are detected. */
     crucialPreprocessorsDetected = false;
@@ -58,7 +61,7 @@ export async function loadConfig(projectPath) {
 /** Get currently active config. */
 export function getConfig() {
     if (!config) {
-        throw new Error("Developer's fault detected, configuration not loaded yet.");
+        throw errHuman;
     }
     return config;
 }

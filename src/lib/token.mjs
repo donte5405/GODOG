@@ -2,6 +2,11 @@
 import { allowedNumberSymbols, asciiNumbers, asciiSymbols, isLabel, isString } from "./strings.mjs";
 
 
+const errUnsupportedNestedMultiline = new Error(`Multiple multiline strings in single line isn't supported.`);
+const errUnknownState = new Error("Unknown state reached, seems like GODOG bug.");
+const errBracketsNotClosed = new Error("Some brackets aren't closed properly.");
+
+
 const gdComboSymbols = [
     // Common in most languages.
     "**=", "<<=", ">>=",
@@ -41,7 +46,7 @@ function formatGdScript(str) {
         }
         if (strs[i].includes(`"""`)) {
             if (strs[i].split(`"""`).length > 2) {
-                throw new Error(`Multiple multiline strings in single line isn't supported.`);
+                throw errUnsupportedNestedMultiline;
             }
             inMultilineString = !inMultilineString;
         }
@@ -188,7 +193,7 @@ export function tokenise(str, mode = "gd") {
 		const c = str[i];
 		switch (state) {
 			default:
-				throw new Error("unknown state reached");
+				throw errUnknownState;
 			case "comment":
 				if (c === "\n") {
 					return false;
@@ -283,7 +288,7 @@ export function tokenise(str, mode = "gd") {
 	submitBuffer(); // FIX: the script not picking the last element in the string stream.
 
 	if (bracketStack !== 0) {
-		throw new Error("Some brackets aren't closed properly.");
+		throw errBracketsNotClosed;
 	}
 
 	/** @type {string[]} */

@@ -16,15 +16,20 @@ import { randomUUID } from "crypto";
 import { meltDirectory } from "./lib/melt.mjs";
 
 
+const errNoProjLocation = new Error("Project location must be specified");
+const errNoSourceDir = new Error("Project source directory invalid.");
+const errNoProjDestDir = new Error("Project destination directory invalid.");
+
+
 if (!process.argv[2]) {
-    throw new Error("Project location must be specified");
+    throw errNoProjLocation;
 }
 
 
 // Set & check for project main directory location.
 const dirLocation = resolve(process.argv[2]);
 if (!existsSync(dirLocation)) {
-    throw new Error("Project source directory invalid.");
+    throw errNoSourceDir;
 }
 
 
@@ -81,7 +86,7 @@ const dirOutLocation = resolve(process.argv[3]);
 
 
 if (!existsSync(dirOutLocation)) {
-    throw new Error("Project destination directory invalid.");
+    throw errNoProjDestDir;
 }
 
 

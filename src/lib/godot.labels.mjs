@@ -9,6 +9,12 @@ import { tokenise } from "./token.mjs";
 import { existsSync } from "fs";
 
 
+const errNoLabelCache = new Error("Godot labels cache file not found.");
+const errInvalidSrcPath = new Error("Specified Godot source path is invalid.");
+/** @param {string} cachePath */
+const errFailLabelCacheLoad = (cachePath) => new Error("Can't load labels cache from the path'" + cachePath + "'");
+
+
 const cachePath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "godot_labels_cache.json");
 const includedDirs = ["core", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: drivers, misc, thirdparty
 const ignoredCalls = [ "TTR", "RTR", "get_icon", "plus_file" ];
@@ -181,10 +187,10 @@ export async function huntLabels(sourcePath) {
 export async function loadGodotLabels(sourcePath = "") {
     if (!existsSync(cachePath)) {
         if (!sourcePath) {
-            throw new Error("Godot labels cache file not found.");
+            throw errNoLabelCache;
         }
         if (!existsSync(sourcePath)) {
-            throw new Error("Specified Godot source path is invalid.");
+            throw errInvalidSrcPath;
         }
         console.log(">>"+sourcePath)
         const labels = await huntLabels(sourcePath);
@@ -195,6 +201,6 @@ export async function loadGodotLabels(sourcePath = "") {
         return JSON.parse(await readFile(cachePath, { encoding: "utf-8" }));
     } catch (e) {
         console.error(e);
-        throw new Error("Can't load labels cache from the path'" + cachePath + "'");
+        throw errFailLabelCacheLoad(cachePath);
     }
 }

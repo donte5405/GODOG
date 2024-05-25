@@ -3,6 +3,10 @@ import { randomUUID } from "crypto";
 import { md5 } from "./md5.mjs";
 
 
+/** @param {string} str */
+const errIncompleteTrQuote = (str) => new Error(`There's incomplete enclosed quad underscore in the string below\n ${str}`);
+
+
 const trQuote = "_*_*_*_";
 
 
@@ -34,7 +38,7 @@ export function hasTranslations(str) {
 export function parseTranslations(str) {
     const lines = str.split(trQuote);
     if (lines.length % 2 === 0)
-        throw new Error(`There's incomplete enclosed quad underscore in the string below\n ${str}`);
+        throw errIncompleteTrQuote(str);
     for (let i = 1; i < lines.length; i += 2) {
         /** @type {Record<string,string>} */
         const json = JSON.parse(`{${lines[i]}}`);
