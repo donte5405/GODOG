@@ -9,21 +9,6 @@ export function shuffleArray(arr) {
 
 
 /**
- * Old implementation of array shuffle.
- * @param {Array} arr 
- */
-function slowShuffle(arr) {
-    const temp = [];
-    while (arr.length > 0) {
-        temp.push(arr.splice(Math.floor(Math.random() * arr.length), 1)[0]);
-    }
-    while (temp.length > 0) {
-        arr.push(temp.splice(0,1)[0]);
-    }
-}
-
-
-/**
  * Fast array shuffle function (ChatGPT gave me this).
  * @param {Array} arr 
  */
