@@ -461,7 +461,7 @@ export class GDParser {
      */
     assemble(token, mode = this.mode) {
         if (this.isInIgnoreBlock) {
-            throw errGdFilePathFormatNotAllowed(this.fileName);
+            throw errIncompleteIgnoreBlock(this.fileName);
         }
         return assemble(token, mode);
     }
