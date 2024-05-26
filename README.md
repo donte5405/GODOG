@@ -532,7 +532,6 @@ _trCharacterIcon.texture = load(tr("PathDefaultCharacterIcon"))
 - **Resource mapping with string formatting will not work!**
 	(Example: `"res://scn/scn_game_%d.tscn" % index`, `"Path/To/My/Node%d" % index`)
 - **It loves destroying GUI strings. To avoid the issue, store readable strings in translation files instead.**
-- Sub classes are still extremely buggy.
 
 ---
 
