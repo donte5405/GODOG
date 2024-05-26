@@ -133,29 +133,7 @@ Tells GODOG to skip crucial preprocessors completely, notably client & server pr
 ### Additional Macros
 GODOG also supports some in-line preprocessors. It detects GDScript comments and try to parse it if the condition meets.
 
-#### 1. Label Mangler
-This GDScript macro will generate random string index using `#GODOG_LABEL:` to generate the scrambled string as follows:
-
-```gdscript
-#GODOG_LABEL:player_hp
-#GODOG_LABEL:player_mp,player_def 
-
-# Yes, it also supports multiple labels in single line separated with commas.
-```
-
-In order to use it, just referring it with strings as usual:
-
-```gdscript
-json["player_hp"]
-```
-
-GODOG will automatically convert it into something nonsense in the final result, for example:
-
-```gdscript
-json["_ab"]
-```
-
-#### 2. Private Field Mangler
+#### 1. Private Field Mangler
 This GDScript macro indentifies any labels that the user want it to be private fields, this help complicating source restoration even more, but also introduces a phenomenon where it causes errors if the field is accessed outside of a script file.
 
 You don't need to add private labels for function parameters and local variables (`var` in function bodies). They'll be automatically recognised and mangled.
@@ -167,7 +145,7 @@ You don't need to add private labels for function parameters and local variables
 *WARNING: You can't use private labels in string paths even if the said path is in the same file as the label. It's in this way by the nature of pretty much any 🦆 (dynamically typed) programming/scripting languages. There's no way around that.*
 
 
-#### 3. Labels Ignore
+#### 2. Labels Ignore
 Sometimes you still want "some" labels to be exposed and be used by other toolings, or simply wanting the game to have modding support without exposing everything in the game for both source compactness and especially more refined way to isolate APIs between ones with modding support (+stable and predictable environment) and others that you want to make changes freely with less worrying about breaking user's mods.
 
 GODOG provides `#GODOG_EXPOSE` for this purpose. It also supports multiple names in a same line.
@@ -183,7 +161,7 @@ function query_nodes(query_name: String) -> Array:
 	# represented since GODOG will conitnue to buther them.
 ```
 
-#### 4. Preprocessors
+#### 3. Preprocessors
 This helps removing code blocks that don't need to be exported in the production releases, like debug blocks and tests.
 
 Simply use `#GODOG_IGNORE` between lines to tell GODOG to ignore lines inside the block:
@@ -269,7 +247,7 @@ node node src/main.mjs /path/to/your/project /path/to/client/directory /path/to/
 This will now allow the project to be exporetd.
 
 
-#### 5. Ignoring files
+#### 4. Ignoring files
 By default, GODOG will ignore file names that start with dot (`.`). You can also ignore entire directory by adding a file `.gdignore` just like regular Godot. However, in case that you still want to use debug files in the development, `.gdignore` will not work.
 
 GODOG provides three ways to ignore entire directory. The first one is obviously by adding `.gdignore` to the directory, with a side effect of your editor will not recognise any files in it. Second option is by adding `godogignore` this tells Godot to see files inside, but will be ignored in the export release. Lastly, by adding `godogclient` and `godogserver`, it will also help isolating between server and client resource exports.

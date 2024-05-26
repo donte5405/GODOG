@@ -263,15 +263,6 @@ export class GDParser {
                         this.isInIgnoreBlock = !this.isInIgnoreBlock;
                         return "";
                     }
-                    if (tokenNsp.indexOf("#GODOG_LABEL:") === 0) {
-                        // Define scrambled label.
-                        const userLabels = tokenNsp.split("#GODOG_LABEL:")[1].split(",");
-                        for (const userLabel of userLabels) {
-                            labels.get(userLabel);
-                        }
-                        // Remove comment.
-                        return "";
-                    }
                     if (tokenNsp.indexOf("#GODOG_PRIVATE:") === 0) {
                         // Define private labels.
                         const privateLabels = tokenNsp.split("#GODOG_PRIVATE:")[1].split(",");
