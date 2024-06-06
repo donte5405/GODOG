@@ -256,7 +256,8 @@ export class GDParser {
                             myBannedLabels.push(label);
                             bannedLabels.push(label);
                         }
-                        return token;
+                        // Remove comment.
+                        return "";
                     }
                     if (tokenNsp.indexOf("#GODOG_IGNORE") === 0) {
                         // Ignore code blocks that aren't required.
