@@ -1,4 +1,8 @@
 //@ts-check
+import { encode } from "@fry/base62";
+import { randomUUID } from "crypto";
+
+
 /** @param {number} num */
 function char(num) { return String.fromCharCode(num); }
 
@@ -31,6 +35,24 @@ export const allowedNumberSymbols = "0123456789xbe-_.";
 /** List of path navigation symbols. */
 export const pathNavSymbols = [ ".", "..", ":", "/" ];
 
+
+/** Get a random unique ID. */
+export function getUniqueId() {
+    return "_" + encode(Buffer.from(randomUUID().split("-").join(""), "hex"));
+}
+
+
+/**
+ * Convert string to snake case.
+ * @param {string} str
+ */
+export function toSnakeCase(str) {
+    if (!str) return "";
+    const matchedStr = str.match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g);
+    if (!matchedStr) return str;
+    const processedStr = matchedStr.map(x => x.toLowerCase());
+    return processedStr.join("_");
+}
 
 /**
  * Check if a path has a speficied file extension.

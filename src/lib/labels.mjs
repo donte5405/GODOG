@@ -1,15 +1,9 @@
 //@ts-check
-import { encode } from "@fry/base62";
-import { randomUUID } from "crypto"; 
 import { shuffleArray } from "./shuffle.mjs";
+import { getUniqueId } from "./strings.mjs";
 
 
 const charCode = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-
-function getUniqueId() {
-    return "_" + encode(Buffer.from(randomUUID().split("-").join(""), "hex"));
-}
 
 
 class GetId {
