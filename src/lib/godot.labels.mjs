@@ -32,9 +32,11 @@ const parser = new XMLParser({
  */
 function parseXml(labels, str) {
     const push = (str = "") => {
-        for (const name of str.split("/")) {
-            if (labels.includes(name)) continue;
-            if (isLabel(name)) labels.push(name);
+        for (const nameTop of str.split("/")) {
+            for (const name of nameTop.split(".")) {
+                if (labels.includes(name)) continue;
+                if (isLabel(name)) labels.push(name);
+            }
         }
     };
 
@@ -55,13 +57,6 @@ function parseXml(labels, str) {
         if (xmlMembers) {
             for (const member of xmlMembers instanceof Array ? xmlMembers : [xmlMembers]) {
                 push(member["@name"]);
-                /** @type {string[]} */
-                const memberPart = member["@name"].split("/");
-                if (memberPart.length > 1) {
-                    for (const m of memberPart) {
-                        push(m);
-                    }
-                }
                 push(member["@type"]);
             }
         }
