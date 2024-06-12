@@ -312,6 +312,9 @@ export class GDParser {
                 } else if (mode === "tscn") {
                     if (tokens[i - 8] === "application" && tokens[i - 4] === "config" && tokens[i - 3] === "/" && tokens[i - 2] === "name" && tokens[i - 1] === "=") {
                         return token; // Prevent game name to be changed (crucial, because Godot references this for file saving).
+                    } else if (tokens[i - 10] === "\"GDScript\"" && tokens[i - 4] === "script" && tokens[i - 3] === "/" && tokens[i - 2] === "source" && tokens[i - 1] === "=") {
+                        console.log("Built-in GDScript detected.\n" + token);
+                        return jsonStringStringify(GDParser.parseStr(jsonStringParse(token, true)), true); // Format built-in scripts.
                     }
                 }
                 let str = jsonStringParse(token, mode === "tscn");
