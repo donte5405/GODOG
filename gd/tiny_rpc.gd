@@ -15,7 +15,6 @@ export var ServerPort := 12345
 export var ServerAddress := ""
 export var BufferMaxLength := 131072 # 128 KiB
 export var ConnectToHostInDebug := false
-export var EnableLocalRpcInProduction := false
 
 
 #GODOG_SERVER
@@ -214,8 +213,6 @@ static func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String =
 
 
 func _ready() -> void:
-	if EnableLocalRpcInProduction:
-		return
 	#GODOG_IGNORE
 	if OS.get_name() == "Server":
 	#GODOG_IGNORE
