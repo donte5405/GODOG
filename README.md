@@ -340,7 +340,7 @@ Also, with the same princicple, it also refuses to modifly Godot's `NodePath`s w
 ---
 
 ### Working With Game Server APIs
-Since GODOG aims at scrambling strings in Godot projects. This makes some of implementations such as API calls completely butchered. The mitigation is already explained as above. But GODOG also exports a complete JSON of "debug symbols" that can be used for remappings. It also offers bi-directional translation, which means this can be used to translate strings in both ways. To utilise it on API game servers, simply using it to convert mangled keys into readable keys. Here's an example of JavaScript-based implementation of the translator:
+Since GODOG aims at scrambling strings in Godot projects. This makes some of implementations such as API calls completely butchered. The mitigation is already explained as above. But GODOG also exports a complete JSON of "debug symbols" that can be used for remappings. It also offers bi-directional translation, which means this can be used to translate strings in both ways. To utilise it on API game servers, simply import and use it to convert mangled keys into readable keys. Here's an example of JavaScript-based implementation of the translator:
 
 ```js
 /**
