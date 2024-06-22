@@ -79,8 +79,6 @@ class GetId {
 
 
 export class Labels {
-    /** If this is for release mode. */
-    releaseMode = false;
     /** @type {string[]} List of all labels that both pairs are randomly generated. */
     randomList = [];
     /** @type {string[]} List of all labels that got new name generated. */
