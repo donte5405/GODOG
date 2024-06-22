@@ -4,7 +4,7 @@ import { XMLParser } from "fast-xml-parser";
 import { readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { checkFileExtension, formatStringQuote, isLabel, isString, looksLikeNodePath } from "./strings.mjs";
+import { checkFileExtension, formatStringQuote, isLabel, isString, jsonStringParse, looksLikeNodePath } from "./strings.mjs";
 import { tokenise } from "./token.mjs";
 import { existsSync } from "fs";
 
@@ -142,7 +142,7 @@ export async function huntLabels(sourcePath) {
                             dontBan = false;
                         }
                         try {
-                            token = JSON.parse(formatStringQuote(token));
+                            token = jsonStringParse(token);
                         } catch {
                             continue;
                         }
