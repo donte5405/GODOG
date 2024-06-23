@@ -321,3 +321,30 @@ export function getProtocolAndPath(str) {
     if (strSplit.length !== 2) return [ "", "" ];
     return [ strSplit[0], strSplit[1] ];
 }
+
+
+/**
+ * Get all labels in string blocks from C-lang source code.
+ * @param {string} str 
+ * @param {string[]} labels
+ */
+export function getLabelsFromStringBlocksInCLangString(str, labels = []) {
+    let buffer = "";
+    const push = () => {
+        if (buffer) {
+            if (isLabel(buffer)) {
+                labels.push(buffer);
+            }
+            buffer = "";
+        }
+    };
+    for (let i = 0; i < str.length; i++) {
+        let c = str[i];
+        if (asciiSymbols.includes(c)) {
+            push();
+            continue;
+        }
+        buffer += c;
+    }
+    return labels;
+}

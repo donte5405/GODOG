@@ -4,7 +4,7 @@ import { XMLParser } from "fast-xml-parser";
 import { readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { checkFileExtension, formatStringQuote, isLabel, isString, jsonStringParse, looksLikeNodePath } from "./strings.mjs";
+import { checkFileExtension, isLabel, isString, getLabelsFromStringBlocksInCLangString } from "./strings.mjs";
 import { tokenise } from "./token.mjs";
 import { existsSync } from "fs";
 
@@ -16,7 +16,7 @@ const errFailLabelCacheLoad = (cachePath) => new Error("Can't load labels cache 
 
 
 const cachePath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "godot_labels_cache.json");
-const includedDirs = ["core", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: drivers, misc, thirdparty
+const includedDirs = ["core", "drivers", "thirdparty", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: drivers, misc, thirdparty
 const ignoredCalls = [ "TTR", "RTR", "get_icon", "plus_file" ];
 
 
@@ -135,25 +135,31 @@ export async function huntLabels(sourcePath) {
                     if (checkFileExtension(filePath, "gen.h")) continue; // Ignore generated files.
                     const tokens = tokenise(srcStr, "clang");
                     for (let i = 0; i < tokens.length; i++) {
-                        let dontBan = true;
                         let token = tokens[i];
                         if (!isString(token)) continue;
                         if (ignoredCalls.includes(tokens[i - 2])) {
-                            dontBan = false;
-                        }
-                        try {
-                            token = jsonStringParse(token);
-                        } catch {
-                            continue;
-                        }
-                        if (!looksLikeNodePath(token)) continue;
-                        for (const subToken of tokenise(token, "path")) {
-                            if (isLabel(subToken) && dontBan) {
-                                push(subToken);
-                            } else {
-                                ban(subToken);
+                            for (const label of getLabelsFromStringBlocksInCLangString(token)) {
+                                ban(label);
+                            }
+                        } else {
+                            for (const label of getLabelsFromStringBlocksInCLangString(token)) {
+                                push(label);
                             }
                         }
+                        // try {
+                        //     token = jsonStringParse(token, true);
+                        // } catch {
+                        //     console.log("WHAT " + token);
+                        //     continue;
+                        // }
+                        // if (!looksLikeNodePath(token)) continue;
+                        // for (const subToken of tokenise(token, "path")) {
+                        //     if (isLabel(subToken) && dontBan) {
+                        //         push(subToken);
+                        //     } else {
+                        //         ban(subToken);
+                        //     }
+                        // }
                     }
                 }
             }
