@@ -275,7 +275,7 @@ export function tokenise(str, mode = "gd") {
 				/** @type {string} */
 				const delimiter = storage.delimiter;
 				if (str.slice(i, i + delimiter.length) === delimiter) {
-					console.log("HEY: " + buffer);
+					pushBuffer(delimiter.length + 1);
 					return false;
 				}
 				pushBuffer();
