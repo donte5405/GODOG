@@ -149,6 +149,18 @@ export function tokenise(str, mode = "gd") {
 					}
 					break;
 				case `"`: case `'`:
+					if (mode === "clang" && str[i - 1] === "R") { // Raw string literals.
+						let ii = 1;
+						let customDelimeter = "";
+						for (; i + ii < str.length; ii++) {
+							if (str[i + ii] === "(") {
+								setState("clang_raw_str", ii + 1, { delimiter: ")" + customDelimeter });
+								return;
+							}
+							customDelimeter += str[i + ii];
+						}
+						throw new Error("Raw string delimeter out of bounds.");
+					}
 					if (str[i + 1] === c && str[i + 2] === c) {
 						strThreeQuotes = true;
 						setState("string", 3);
@@ -181,15 +193,15 @@ export function tokenise(str, mode = "gd") {
 		}
 	};
 
-	const setState = (state = "", pushBufferCount = 0) => {
+	const setState = (state = "", pushBufferCount = 0, storage = {}) => {
 		pushBuffer(pushBufferCount);
-		while (runState(state)) {
+		while (runState(state, storage)) {
 			if (i < str.length) continue;
 			break;
 		}
 	};
 
-	const runState = (state = "") => {
+	const runState = (state = "", storage = {}) => {
 		const c = str[i];
 		switch (state) {
 			default:
@@ -224,6 +236,10 @@ export function tokenise(str, mode = "gd") {
 					pushBuffer();
 					return true;
 				}
+				if (mode === "clang" && [ "'" ].includes(c)) {
+					pushBuffer();
+					return true;
+				}
 				return false;
 			case "string":
 				if (escapeChar) {
@@ -251,6 +267,15 @@ export function tokenise(str, mode = "gd") {
 					} else {
 						pushBuffer();
 					}
+					return false;
+				}
+				pushBuffer();
+				return true;
+			case "clang_raw_str":
+				/** @type {string} */
+				const delimiter = storage.delimiter;
+				if (str.slice(i, i + delimiter.length) === delimiter) {
+					console.log("HEY: " + buffer);
 					return false;
 				}
 				pushBuffer();
