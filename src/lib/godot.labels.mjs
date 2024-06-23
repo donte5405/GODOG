@@ -16,7 +16,7 @@ const errFailLabelCacheLoad = (cachePath) => new Error("Can't load labels cache 
 
 
 const cachePath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "godot_labels_cache.json");
-const includedDirs = ["core", "drivers", "thirdparty", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: drivers, misc, thirdparty
+const includedDirs = ["core", "drivers", "thirdparty", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: thirdparty
 const ignoredCalls = [ "TTR", "RTR", "get_icon", "plus_file" ];
 
 
