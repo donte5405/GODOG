@@ -146,20 +146,6 @@ export async function huntLabels(sourcePath) {
                                 push(label);
                             }
                         }
-                        // try {
-                        //     token = jsonStringParse(token, true);
-                        // } catch {
-                        //     console.log("WHAT " + token);
-                        //     continue;
-                        // }
-                        // if (!looksLikeNodePath(token)) continue;
-                        // for (const subToken of tokenise(token, "path")) {
-                        //     if (isLabel(subToken) && dontBan) {
-                        //         push(subToken);
-                        //     } else {
-                        //         ban(subToken);
-                        //     }
-                        // }
                     }
                 }
             }
