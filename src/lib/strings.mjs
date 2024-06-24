@@ -126,7 +126,7 @@ export function isLabel(str) {
 export function isNumber(str) {
     if (!str) return false;
     if ("0123456789".includes(str[0])) return true;
-    return true;
+    return false;
 }
 
 
@@ -219,10 +219,8 @@ export function looksLikeNodePath(str) {
     for (const section of splitNodePath(str)) {
         if (pathNavSymbols.includes(section)) continue;
         if (isStringFormat(section)) continue;
-        for (let i = 0; i < section.length; i++) {
-            if (isLabel(section)) continue;
-            return false;
-        }
+        if (isLabel(section)) continue;
+        return false;
     }
     return true;
 }
@@ -320,10 +318,17 @@ export function getLabelsFromStringBlocksInCLangString(str, labels = []) {
             buffer = "";
         }
     };
+    const nuke = () => {
+        buffer = ""; 
+    };
     for (let i = 0; i < str.length; i++) {
         let c = str[i];
         if (asciiSymbols.includes(c)) {
-            push();
+            if ("%\\".includes(str[i - buffer.length - 1])) {
+                nuke();
+            } else {
+                push();
+            }
             continue;
         }
         buffer += c;
