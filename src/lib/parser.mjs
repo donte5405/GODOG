@@ -268,7 +268,13 @@ export class GDParser {
                         // Define private labels.
                         const privateLabels = tokenNsp.split("#GODOG_PRIVATE:")[1].split(",");
                         for (const privateLabel of privateLabels) {
-                            this._getOrAddPrivateLabel(privateLabel, true);
+                            const label = this._getOrAddPrivateLabel(privateLabel, true);
+                            // Reformat all previous tokens.
+                            for (let ii = 0; ii < i; ii++) {
+                                if (tokens[ii] === labels.get(privateLabel)) {
+                                    tokens[ii] = label;
+                                }
+                            }
                         }
                         // Remove comment.
                         return "";
