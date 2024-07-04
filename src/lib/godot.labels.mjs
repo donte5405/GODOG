@@ -16,7 +16,7 @@ const errFailLabelCacheLoad = (cachePath) => new Error("Can't load labels cache 
 
 
 const cachePath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "godot_labels_cache.json");
-const includedDirs = ["core", "drivers", "thirdparty", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: thirdparty
+const includedDirs = ["core", "drivers", "doc", "editor", "main", "modules", "platform", "scene", "servers"]; // excludes: thirdparty
 const ignoredCalls = [ "TTR", "RTR", "get_icon", "plus_file" ];
 
 
@@ -110,12 +110,6 @@ export async function huntLabels(sourcePath) {
     const labels = {};
     /** @type {Record<string,boolean>} */
     let bannedLabels = {};
-    
-    const ban = (str = "") => {
-        if (bannedLabels[str]) return;
-        bannedLabels[str] = true;
-        delete labels[str];
-    };
 
     const push = (str = "") => {
         if (bannedLabels[str]) return;
@@ -138,9 +132,7 @@ export async function huntLabels(sourcePath) {
                         let token = tokens[i];
                         if (!isString(token)) continue;
                         if (ignoredCalls.includes(tokens[i - 2])) {
-                            for (const label of getLabelsFromStringBlocksInCLangString(token)) {
-                                ban(label);
-                            }
+                            continue;
                         } else {
                             for (const label of getLabelsFromStringBlocksInCLangString(token)) {
                                 push(label);
