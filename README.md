@@ -139,7 +139,7 @@ export var button_path
 
 To workaround this issue, simply type-cast variables directly if possible
 
-```
+```gdscript
 # Before.
 export var button_path: NodePath
 export(String, FILE, "*.tscn") var next_scene_path := ""
