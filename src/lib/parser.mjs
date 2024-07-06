@@ -31,6 +31,34 @@ import { assemble, tokenise } from "./token.mjs";
 // const testPath = join(dirname(__filename), "../", "../", "/TEST");
 
 
+/** Usually, only `export` is only thing supported, but in case some weirdos use this project with Godot 4, these are added just in case. */
+const gdscriptExports = [
+    "export",
+    // These must be handled as complete removal.
+    // "export_group",
+    // "export_subgroup",
+    // "export_category",
+    // END These must be handled as complete removal.
+    "export_file",
+    "export_dir",
+    "export_global_file",
+    "export_global_dir",
+    "export_multiline",
+    "export_range",
+    "export_exp_easing",
+    "export_color_no_alpha",
+    "export_node_path",
+    "export_flags",
+    "export_flags_2d_physics",
+    "export_flags_2d_rende",
+    "export_flags_2d_navigation",
+    "export_flags_2d_navigation",
+    "export_flags_3d_render",
+    "export_flags_3d_navigation",
+    "export_enum"
+];
+
+
 /** @param {string} token */
 const errStrFormatAdvancedUnsupported = (token) => new Error("It looks like you're trying to use placeholder-based string formatting with " + token + ". It's not supported by GODOG yet.");
 /** @param {string} filePath */
@@ -409,6 +437,25 @@ export class GDParser {
                     if (!gdScriptUserTypes.includes(className)) {
                         gdScriptUserTypes.push(className);
                     }
+                    return token;
+                }
+                if (gdscriptExports.includes(token) && config.stripExportParams && tokens[i + 1] === "(") {
+                    // Strip export parameters.
+                    let stack = 1;
+                    let startPoint = i + 1;
+                    let endPoint = startPoint + 1;
+                    for (let ii = endPoint; ii < tokens.length; ii++) {
+                        if (tokens[ii] === "(") {
+                            stack ++;
+                        } else if (tokens[ii] === ")") {
+                            stack --;
+                        }
+                        if (stack === 0) {
+                            endPoint = ii;
+                            break;
+                        }
+                    }
+                    tokens.splice(startPoint, endPoint - startPoint + 1);
                     return token;
                 }
                 if (token === "func") {

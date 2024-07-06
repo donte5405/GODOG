@@ -117,6 +117,7 @@ Then write the file in JSON fashion as usual.
 {
     "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
     "removeTypeCasting": false, // This tells GODOG to also remove type castings.
+	"noExportParams": false, // This tells GODOG to strip away export parameters.
     "ignoreCrucialPreprocessors": false // This will tell GODOG to skip crucial preprocessors completely.
 }
 ```
@@ -125,6 +126,29 @@ Then write the file in JSON fashion as usual.
 Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the project's root directory.
 - `removeTypeCasting`: `boolean`
 Tells GODOG to remove type castings from your code. This can be unpreferable since this tends to break code. During type casting, Godot will also try to convert value during parameter passings to specified type. Without type casting, values may be left as-is and become especially unsafe to deal with especially with JSON objects. If you are willing to fix your code for sake of more obscure source exports, enable this option.
+- `noExportParams`: `boolean`
+Tells GODOG to strip away all export parameters. This is very useful in case you don't want game hackers/modders to mess around with main script files and scenes. It also helps saving space albeit slightly to neglectable. However, this introduces a side effect that it will break game's scripts if export variable isn't type-casted properly.
+
+```gdscript
+# Before.
+export(NodePath) var button_path
+
+# After. Godot has no idea how to recognise this variable and will give an error.
+export var button_path
+```
+
+To workaround this issue, simply type-cast variables directly if possible
+
+```
+# Before.
+export var button_path: NodePath
+export(String, FILE, "*.tscn") var next_scene_path := ""
+
+# After.
+export var _mv_: NodePath
+export var _xZ_ := ""
+```
+
 - `ignoreCrucialPreprocessors`: `boolean`
 Tells GODOG to skip crucial preprocessors completely, notably client & server preprocessors. **This should always be disabled unless you absolutely know what you're doing.**
 
