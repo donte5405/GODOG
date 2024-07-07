@@ -180,7 +180,7 @@ class_name GameAPI
 #GODOG_EXPOSE: GameAPI
 
 #GODOG_EXPOSE: query_nodes, query_name
-function query_nodes(query_name: String) -> Array:
+func query_nodes(query_name: String) -> Array:
 	# Entire leftover source code that could be vaguely
 	# represented since GODOG will conitnue to buther them.
 ```
