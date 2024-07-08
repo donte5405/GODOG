@@ -27,18 +27,18 @@ If you aren't afraid of it ruining your work, use it however you please, but **d
 In short, it tries to strip away every single user-defined labels as much as it's realistically possible while still maintaining project's functionality the best it can.
 
 **List of GODOG features.**
-- Minify all user labels to compact form (3 – 7 bytes long) while *automatically* avoid all Godot's reserved words and API references.
-- Unify user's source tree, in other words, move all Godot related files to project root directory. Making it a lot more difficult to trace and understand the entire project.
+- Minify all user labels to compact form (1 – 3 bytes long for small medium sized projects) while *automatically* avoid all Godot's reserved words and API references, reduces up to 30% of Godot resource file size.
+- Unify user's source tree, in other words, move all Godot related files to project root directory, helps reducing Godot resource file size even more yet making it a lot more difficult to trace resources and understand the entire project.
 - Automatic code analysis and warn if the project is compatible with GODOG or not.
 - Provide simple script preprocessors that help stripping unnecessary code blocks that aren't required in a production build, and/or separating builds between client & server builds.
 - Provide simple ways to exclude resources between debug source and production builds and/or client-server builds.
 - Provide a way to intentionally break version compatibility if mod maintainability is a priority, forcing modders to only stay in a sandbox.
-- Provide a feature to encapsulate private fields and automatically handle local fields to make it even more difficult to construct readable code back.
+- Provide a method to strip away unnecessary code to ensure compact-ness without affecting functionality, such as additional export parameters.
 
 ---
 
 ### Is This DRM or Copy Protection?
-No, nor it's even remotely close. This only strips away anything that Godot doesn't need in order for it to run, making it more difficult to restore the project back into its original source code.
+No, nor it's even remotely close. This only strips away anything that Godot doesn't need in order for it to run, making it more compact yet more difficult to restore Godot project back into its original source code.
 
 ---
 
@@ -127,14 +127,14 @@ Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the proje
 - `removeTypeCasting`: `boolean`
 Tells GODOG to remove type castings from your code. This can be unpreferable since this tends to break code. During type casting, Godot will also try to convert value during parameter passings to specified type. Without type casting, values may be left as-is and become especially unsafe to deal with especially with JSON objects. If you are willing to fix your code for sake of more obscure source exports, enable this option.
 - `noExportParams`: `boolean`
-Tells GODOG to strip away all export parameters. This is very useful in case you don't want game hackers/modders to mess around with main script files and scenes. It also helps saving space albeit slightly to neglectable. However, this introduces a side effect that it will break game's scripts if export variable isn't type-casted properly.
+Tells GODOG to strip away all export parameters. Not only that it helps stripping away code blocks that Godot don't care during runtime (albeit, very small portion), it's also very useful in case you don't want game hackers/modders to mess around with main script files and scenes. However, this introduces a side effect that it will break game's scripts if export variable isn't type-casted properly.
 
 ```gdscript
 # Before.
 export(NodePath) var button_path
 
 # After. Godot has no idea how to recognise this variable and will give an error.
-export var button_path
+export var aa
 ```
 
 To workaround this issue, simply type-cast variables directly if possible
@@ -145,8 +145,8 @@ export var button_path: NodePath
 export(String, FILE, "*.tscn") var next_scene_path := ""
 
 # After.
-export var _mv_: NodePath
-export var _xZ_ := ""
+export var mv: NodePath
+export var xZ := ""
 ```
 
 - `ignoreCrucialPreprocessors`: `boolean`
@@ -240,25 +240,25 @@ func MultiParamFunc(
 After exporting, this is what it looks like in a client export:
 
 ```gdscript
-class_name _hX_
+class_name hX
 
-func _03_(_VM_,_Bs_,_VB_,_g4_):
+func a3(VM,Bs,VB,g4):
 	print(1+2)
 	print(" this is client code. ")
 	print(" this is going to stay. ")
-	return{_y3_="test",_QJ_=[0,1,2,3,],_Tg_={_UI_="A",_GO_="B",}}
+	return{y3="test",QJ=[0,1,2,3,],Tg={UI="A",GO="B",}}
 ```
 
 And this is what it looks like in a server export:
 
 ```gdscript
-class_name _hX_
+class_name hX
 
-func _03_(_VM_,_Bs_,_VB_,_g4_):
+func a3(VM,Bs,VB,g4):
 	print(1+2)
 	print(" this is server code. ")
 	print(" this is going to stay. ")
-	return{_y3_="test",_QJ_=[0,1,2,3,],_Tg_={_UI_="A",_GO_="B",}}
+	return{y3="test",QJ=[0,1,2,3,],Tg={UI="A",GO="B",}}
 ```
 
 However, this will NOT work by default because GODOG will try to prevent source leaks if command line arguments options aren't satisfied. This time, GODOG requires at least three parameters to export the project properly:
