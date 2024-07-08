@@ -390,17 +390,10 @@ export class GDParser {
             return token;
         }
         if (mode === "path") { // For path strings.
-            // Ignore banned (Godot) labels.
-            if (bannedLabels.includes(token)) return token;
             return labels.get(token);
         }
         if (mode === "tscn") { // For TSCN, TRES, other Godot related files, and files that don't need user labels randomisation.
-            // Ignore banned (Godot) labels.
-            if (bannedLabels.includes(token)) return token;
-            // Only replace known strings.
-            if (labels.has(token)) return labels.get(token);
-            // Ignore unknown strings.
-            return token;
+            return labels.get(token);
         }
         if (mode === "gd") { // For GDScript files.
             if (isLabel(token) && tokens[i - 1] === "@") {

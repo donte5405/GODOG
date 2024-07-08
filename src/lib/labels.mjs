@@ -1,9 +1,33 @@
 //@ts-check
+import { loadGodotLabels } from "./godot.labels.mjs";
 import { shuffleArray } from "./shuffle.mjs";
 import { getUniqueId } from "./strings.mjs";
 
 
-const charCode = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const charCodeFirstDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+const charCode = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+
+
+/** @type {string[]} List of banned labels. Will load default ones from Godot internal labels. */
+const bannedLabels = await loadGodotLabels();
+
+
+/**
+ * Get character code according to the position.
+ * @param {number} digitPos 
+ */
+function getCharcode(digitPos) {
+    return (digitPos > 1) ? charCode : charCodeFirstDigit;
+}
+
+/**
+ * 
+ * @param {number} digits 
+ */
+function getTotalCharactersCount(digits) {
+    if (digits <= 0) return 0;
+    return charCodeFirstDigit.length *  Math.pow(charCode.length, digits - 1);
+}
 
 
 class GetId {
@@ -50,11 +74,11 @@ class GetId {
             charList.length = 0;
             this.charListIndex = 0;
             this.charListDigits ++;
-            let totalCharactersCount = Math.pow(charCode.length, this.charListDigits);
+            let totalCharactersCount = getTotalCharactersCount(this.charListDigits);
             for (let l = 0; l < totalCharactersCount; l++) {
                 let x = 0;
                 for (; x < charArray.length; x++) {
-                    if (charArray[x] < charCode.length - 1) {
+                    if (charArray[x] < getCharcode(x).length - 1) {
                         charArray[x]++;
                         break;
                     }
@@ -63,11 +87,11 @@ class GetId {
                 if (x >= charArray.length) {
                     charArray.push(0);
                 }
-                let text = "_";
-                charArray.forEach((x) => {
-                    text += charCode[x];
+                let text = "";
+                charArray.forEach((x, i) => {
+                    text += getCharcode(i)[x];
                 });
-                text += "_";
+                if (bannedLabels.includes(text)) continue;
                 charList.push(text);
             }
             shuffleArray(charList);
@@ -116,7 +140,7 @@ export class Labels {
         if (!name) {
             name = getUniqueId();
             this.randomList.push(name);
-        }
+        } else if (bannedLabels.includes(name)) return name;
         if (!this.list.includes(name)) {
             if (this.getId) {
                 return this.map(name, this.getId.get());
@@ -134,6 +158,7 @@ export class Labels {
         this.getId = getId;
         this.listMap = {};
         for (const name of listCopy) {
+            if (bannedLabels.includes(name)) continue;
             this.map(name, getId.get());
         }
     }
