@@ -111,6 +111,19 @@ export class Labels {
     listMap = {};
     /** @type {GetId?} */
     getId;
+    /** @type {Record<string,number>} List of string maps that contain label occurence data. */
+    occurenceMap = {};
+
+    /**
+     * Count label's occurence time/
+     * @param {string} name 
+     */
+    countOccurence(name) {
+        if (!this.occurenceMap[name]) {
+            this.occurenceMap[name] = 0;
+        }
+        this.occurenceMap[name]++;
+    }
 
     /**
      * If specified name exists.
@@ -141,6 +154,7 @@ export class Labels {
             name = getUniqueId();
             this.randomList.push(name);
         } else if (bannedLabels.includes(name)) return name;
+        this.countOccurence(name);
         if (!this.list.includes(name)) {
             if (this.getId) {
                 return this.map(name, this.getId.get());
@@ -153,6 +167,8 @@ export class Labels {
     /** Compress labels length to something short and digestible. */
     compress() {
         const listCopy = [ ...this.list ];
+        const occurence = this.occurenceMap;
+        listCopy.sort((a, b) => occurence[b] - occurence[a]);
         const getId = new GetId();
         this.list.length = 0;
         this.getId = getId;
