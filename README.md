@@ -55,7 +55,7 @@ GODOG adds extra tasks to those bad actors that try to take advantage of your Go
 ---
 
 ### Prerequisites
-Make sure that you have Node.JS 21.6.2 or later.
+Make sure that you have Node.JS 21.6.2 or newer.
 
 Clone this project, and clone/download Godot's source code from the Godot repository. Don't forget to check/switch branch if the version you use matches with the version that you're using to develop the game.
 
@@ -72,6 +72,10 @@ node src/labels.gen.mjs C:\path\to\godot\source\code\directory
 ```
 
 It will start generating possible Godot labels the best effort it can, this need to be run only once. You can also delete the Godot source code after this action.
+
+If you don't want to waste your time building labels cache yourself, here's pre-generated cache. Download, extract, and place it in the directory of GODOG.
+
+[godot_labels_cache.zip (3.5.3)](https://github.com/user-attachments/files/16138291/godot_labels_cache.zip)
 
 ---
 
