@@ -37,6 +37,8 @@ class TrpcServer extends Node:
 			var _privateKey := CryptoKey.new()
 			_publicKey.load(_Trpc.SslPublicKeyPath)
 			_privateKey.load(_Trpc.SslPrivateKeyPath)
+			_wsServer.ssl_certificate = _publicKey
+			_wsServer.private_key = _privateKey
 		_wsServer.connect("client_connected", self, "_clientConnected")
 		_wsServer.connect("client_disconnected", self, "_clientDisconnected")
 		_wsServer.connect("client_close_request", self, "_clientCloseRequest")
