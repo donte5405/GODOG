@@ -66,7 +66,7 @@ class TrpcServer extends Node:
 
 
 	func _dataReceived(_peerId: int) -> void:
-		_Trpc._ParsePeerPacket(_wsServer, _peerId)
+		_Trpc._ParsePeerPacket(_wsServer.get_peer(_peerId), true)
 #GODOG_SERVER
 
 
@@ -114,12 +114,11 @@ class TrpcClient extends Node:
 
 
 	func _dataReceived() -> void:
-		_Trpc._ParsePeerPacket(_wsClient)
+		_Trpc._ParsePeerPacket(_wsClient.get_peer(1), false)
 #GODOG_CLIENT
 
 
-func _ParsePeerPacket(_wsMpPeer: WebSocketMultiplayerPeer, _peerId: int = 1) -> void:
-	var _peer := _wsMpPeer.get_peer(_peerId)
+func _ParsePeerPacket(_peer: WebSocketPeer, _isServer: bool) -> void:
 	var _pkt := _peer.get_packet()
 	if _pkt.empty():
 		#GODOG_SERVER
@@ -132,7 +131,9 @@ func _ParsePeerPacket(_wsMpPeer: WebSocketMultiplayerPeer, _peerId: int = 1) -> 
 		printerr("%s Sent an invalid data type packet, not an array." % _peer.get_connected_host())
 		#GODOG_SERVER
 		return
-	_DispatchFuncCall(_peer, _obj)
+	if _isServer:
+		_obj = [ _peer ] + _obj
+	_DispatchFuncCall(_obj)
 
 
 func _IsValidFuncCall(_funcArgs: Array) -> bool:
@@ -143,7 +144,7 @@ func _IsValidFuncCall(_funcArgs: Array) -> bool:
 	return true
 
 
-func _DispatchFuncCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+func _DispatchFuncCall(_funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_SERVER
 		printerr("Invalid RPC: %s" % var2str(_funcArgs))
@@ -155,10 +156,10 @@ func _DispatchFuncCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 		printerr("Function '%s' not found, RPC failed.")
 		#GODOG_SERVER
 		return
-	(_FuncMap[_funcName] as FuncRef).call_funcv([ _peer ] + _funcArgs)
+	(_FuncMap[_funcName] as FuncRef).call_funcv(_funcArgs)
 
 
-func _Rpc(_funcArgs: Array, _peer: WebSocketPeer) -> void:
+func _Rpc(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_SERVER
 		printerr("Invalid RPC: %s" % var2str(_funcArgs))
@@ -168,20 +169,20 @@ func _Rpc(_funcArgs: Array, _peer: WebSocketPeer) -> void:
 
 
 #GODOG_CLIENT
-func Request(_funcArgs) -> void:
+func Request(_funcArgs: Array) -> void:
 	if _ClientPeer:
-		_Rpc(_funcArgs, _ClientPeer)
+		_Rpc(_ClientPeer, _funcArgs)
 	else:
-		_DispatchFuncCall(null, _funcArgs)
+		_DispatchFuncCall([ null ] + _funcArgs)
 #GODOG_CLIENT
 
 
 #GODOG_SERVER
 func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 	if _peer:
-		_Rpc(_funcArgs, _peer)
+		_Rpc(_peer, _funcArgs)
 	else:
-		_DispatchFuncCall(null, _funcArgs)
+		_DispatchFuncCall(_funcArgs)
 #GODOG_SERVER
 
 
