@@ -1,5 +1,4 @@
 extends Node
-class_name Trpc
 
 
 #GODOG_SERVER
@@ -11,34 +10,39 @@ signal ClientConnected()
 signal ClientDisconnected()
 #GODOG_CLIENT
 
+
+#GODOG_PRIVATE: _FuncMap, _ClientPeer
+var _FuncMap := {}
+var _ClientPeer: WebSocketPeer
+
 export var ServerPort := 12345
 export var ServerAddress := ""
 export var BufferMaxLength := 131072 # 128 KiB
 export var ConnectToHostInDebug := false
+export(String, FILE, "*.crt") var SslPublicKeyPath := ""
+export(String, FILE, "*.key") var SslPrivateKeyPath := ""
 
 
 #GODOG_SERVER
 class TrpcServer extends Node:
 	#GODOG_PRIVATE: _bufferMaxLength, _serverPort, _wsServer, _Trpc
-	var _bufferMaxLength := 131072 # 128 KiB
-	var _serverPort := 12345
 	var _wsServer := WebSocketServer.new()
 
-	onready var _Trpc: Trpc = get_parent()
-
-
-	func _init(_port: int, _buffLength: int) -> void:
-		_serverPort = _port
-		_bufferMaxLength = _buffLength
+	onready var _Trpc := get_parent()
 
 
 	func _ready() -> void:
+		if _Trpc.SslPublicKeyPath and _Trpc.SslPrivateKeyPath:
+			var _publicKey := X509Certificate.new()
+			var _privateKey := CryptoKey.new()
+			_publicKey.load(_Trpc.SslPublicKeyPath)
+			_privateKey.load(_Trpc.SslPrivateKeyPath)
 		_wsServer.connect("client_connected", self, "_clientConnected")
 		_wsServer.connect("client_disconnected", self, "_clientDisconnected")
 		_wsServer.connect("client_close_request", self, "_clientCloseRequest")
 		_wsServer.connect("data_received", self, "_dataReceived")
-		if _wsServer.listen(_serverPort) != OK:
-			printerr("Unable to start a server at port %d." % _serverPort)
+		if _wsServer.listen(_Trpc.ServerPort) != OK:
+			printerr("Unable to start a server at port %d." % _Trpc.ServerPort)
 			return
 		else:
 			get_tree().connect("idle_frame", _wsServer, "poll")
@@ -60,31 +64,26 @@ class TrpcServer extends Node:
 
 
 	func _dataReceived(_peerId: int) -> void:
-		Trpc.ParsePeerPacket(_wsServer, _peerId)
+		_Trpc._ParsePeerPacket(_wsServer, _peerId)
 #GODOG_SERVER
 
 
 #GODOG_CLIENT
 class TrpcClient extends Node:
 	#GODOG_PRIVATE: _hostAddress, _wsClient
-	var _hostAddress := ""
 	var _wsClient := WebSocketClient.new()
 
-	onready var _Trpc: Trpc = get_parent()
+	onready var _Trpc := get_parent()
 
 
 	func ConnectToHost() -> void:
-		if _wsClient.connect_to_url(_hostAddress) != OK:
+		if _wsClient.connect_to_url(_Trpc.ServerAddress) != OK:
 			#GODOG_IGNORE
-			printerr("Failed to issue the connection to the address %s, retrying..." % _hostAddress)
+			printerr("Failed to issue the connection to the address %s, retrying..." % _Trpc.ServerAddress)
 			#GODOG_IGNORE
-			Engine.remove_meta("_CLIENT_PEER")
+			_Trpc._ClientPeer = null
 			call_deferred("ConnectToHost")
 
-
-	func _init(_addr: String) -> void:
-		_hostAddress = _addr
-	
 
 	func _ready() -> void:
 		_wsClient.connect("data_received", self, "_dataReceived")
@@ -104,28 +103,20 @@ class TrpcClient extends Node:
 	
 
 	func _connectionEstablished(_proto: String = "") -> void:
-		Engine.set_meta("_CLIENT_PEER", _wsClient.get_peer(1))
+		_Trpc._ClientPeer = _wsClient.get_peer(1)
 		get_tree().connect("idle_frame", _wsClient, "poll")
 		_Trpc.emit_signal("ClientConnected")
 		#GODOG_IGNORE
-		print("Connected to host %s." % _hostAddress)
+		print("Connected to host %s." % _Trpc.ServerAddress)
 		#GODOG_IGNORE
 
 
 	func _dataReceived() -> void:
-		Trpc.ParsePeerPacket(_wsClient)
+		_Trpc._ParsePeerPacket(_wsClient)
 #GODOG_CLIENT
 
 
-static func IsValidFuncCall(_funcArgs: Array) -> bool:
-	if _funcArgs.size() == 0:
-		return false
-	if typeof(_funcArgs[0]) != TYPE_STRING:
-		return false
-	return true
-
-
-static func ParsePeerPacket(_wsMpPeer: WebSocketMultiplayerPeer, _peerId: int = 1) -> void:
+func _ParsePeerPacket(_wsMpPeer: WebSocketMultiplayerPeer, _peerId: int = 1) -> void:
 	var _peer := _wsMpPeer.get_peer(_peerId)
 	var _pkt := _peer.get_packet()
 	if _pkt.empty():
@@ -139,42 +130,34 @@ static func ParsePeerPacket(_wsMpPeer: WebSocketMultiplayerPeer, _peerId: int = 
 		printerr("%s Sent an invalid data type packet, not an array." % _peer.get_connected_host())
 		#GODOG_SERVER
 		return
-	Trpc.DispatchFuncCall(_peer, _obj)
+	_DispatchFuncCall(_peer, _obj)
 
 
-static func DispatchFuncCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
-	if not IsValidFuncCall(_funcArgs):
+func _IsValidFuncCall(_funcArgs: Array) -> bool:
+	if _funcArgs.size() == 0:
+		return false
+	if typeof(_funcArgs[0]) != TYPE_STRING:
+		return false
+	return true
+
+
+func _DispatchFuncCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_SERVER
 		printerr("Invalid RPC: %s" % var2str(_funcArgs))
 		#GODOG_SERVER
 		return
 	var _funcName: String = _funcArgs.pop_front()
-	var _funcMap := Trpc.GetFuncMap()
-	if not (_funcName in _funcMap):
+	if not (_funcName in _FuncMap):
 		#GODOG_SERVER
 		printerr("Function '%s' not found, RPC failed.")
 		#GODOG_SERVER
 		return
-	(_funcMap[_funcName] as FuncRef).call_funcv([ _peer ] + _funcArgs)
+	(_FuncMap[_funcName] as FuncRef).call_funcv([ _peer ] + _funcArgs)
 
 
-static func GetClientPeer() -> WebSocketPeer:
-	return Engine.get_meta("_CLIENT_PEER")
-
-
-static func GetFuncMap() -> Dictionary:
-	var _a := "_GODOG_RPC_FUNC_MAP"
-	if not Engine.has_meta(_a):
-		Engine.set_meta(_a, {})
-	return Engine.get_meta(_a)
-
-
-static func HasClientPeer() -> bool:
-	return Engine.has_meta("_CLIENT_PEER")
-
-
-static func _Rpc(_funcArgs: Array, _peer: WebSocketPeer) -> void:
-	if not IsValidFuncCall(_funcArgs):
+func _Rpc(_funcArgs: Array, _peer: WebSocketPeer) -> void:
+	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_SERVER
 		printerr("Invalid RPC: %s" % var2str(_funcArgs))
 		#GODOG_SERVER
@@ -183,33 +166,32 @@ static func _Rpc(_funcArgs: Array, _peer: WebSocketPeer) -> void:
 
 
 #GODOG_CLIENT
-static func Request(_funcArgs) -> void:
-	if HasClientPeer():
-		_Rpc(_funcArgs, GetClientPeer())
+func Request(_funcArgs) -> void:
+	if _ClientPeer:
+		_Rpc(_funcArgs, _ClientPeer)
 	else:
-		DispatchFuncCall(null, _funcArgs)
+		_DispatchFuncCall(null, _funcArgs)
 #GODOG_CLIENT
 
 
 #GODOG_SERVER
-static func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 	if _peer:
 		_Rpc(_funcArgs, _peer)
 	else:
-		DispatchFuncCall(null, _funcArgs)
+		_DispatchFuncCall(null, _funcArgs)
 #GODOG_SERVER
 
 
-static func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String = "") -> void:
+func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String = "") -> void:
 	if not _objFuncName:
 		_objFuncName = _funcName
-	var _funcMap := GetFuncMap()
-	if _objFuncName in _funcMap:
+	if _objFuncName in _FuncMap:
 		#GODOG_SERVER
 		printerr("'%s' already got registered, replacing...")
 		#GODOG_SERVER
 		pass
-	_funcMap[_funcName] = funcref(_obj, _objFuncName)
+	_FuncMap[_funcName] = funcref(_obj, _objFuncName)
 
 
 func _ready() -> void:
@@ -217,14 +199,14 @@ func _ready() -> void:
 	if OS.get_name() == "Server":
 	#GODOG_IGNORE
 	#GODOG_SERVER
-		add_child(TrpcServer.new(ServerPort, BufferMaxLength))
+		add_child(TrpcServer.new())
 	#GODOG_SERVER
 	#GODOG_IGNORE
 		return
 	if not OS.is_debug_build() or ConnectToHostInDebug:
 	#GODOG_IGNORE
 	#GODOG_CLIENT
-		add_child(TrpcClient.new(ServerAddress))
+		add_child(TrpcClient.new())
 	#GODOG_CLIENT
 	#GODOG_IGNORE
 		return

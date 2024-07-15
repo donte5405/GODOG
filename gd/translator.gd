@@ -7,7 +7,11 @@ class_name Tr
 const TR_QUOTE = "_" + "*" + "_" + "*" + "_" + "*" + "_"
 
 
-static func dsk(_key: String) -> String:
+static func Csv(_key: String) -> String:
+	return Engine.tr(_key)
+
+
+static func Dsk(_key: String) -> String:
     if TR_QUOTE in _key:
         # Debug translation, quite slow.
         var _json: Dictionary = JSON.parse("{" + "".join(_key.split(TR_QUOTE)) + "}").result
