@@ -31,6 +31,25 @@ class TrpcServer extends Node:
 	onready var _Trpc := get_parent()
 
 
+	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
+		_wsServer.get_peer(_peerId).get_connected_host()
+		_Trpc.emit_signal("PeerConnected", _peerId)
+		print("OPEN ip: %s, id =  %d, proto = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _protocol])
+
+
+	func _PeerCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
+		print("CLOSE_REQ ip: %s, id =  %d, code = %d, reason = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
+	
+
+	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
+		_Trpc.emit_signal("PeerDisconnected", _peerId)
+		print("CLOSE ip: %s, id =  %d, clean = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, str(_wasClean)])
+
+
+	func _DataReceived(_peerId: int) -> void:
+		_Trpc._ParsePeerPacket(_wsServer.get_peer(_peerId), true)
+
+
 	func _ready() -> void:
 		if _Trpc.SslPublicKeyPath and _Trpc.SslPrivateKeyPath:
 			var _publicKey := X509Certificate.new()
@@ -50,25 +69,6 @@ class TrpcServer extends Node:
 
 	func _process(_delta: float) -> void:
 		_wsServer.poll()
-
-
-	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
-		_wsServer.get_peer(_peerId).get_connected_host()
-		_Trpc.emit_signal("PeerConnected", _peerId)
-		print("OPEN ip: %s, id =  %d, proto = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _protocol])
-
-
-	func _PeerCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
-		print("CLOSE_REQ ip: %s, id =  %d, code = %d, reason = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
-	
-
-	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
-		_Trpc.emit_signal("PeerDisconnected", _peerId)
-		print("CLOSE ip: %s, id =  %d, clean = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, str(_wasClean)])
-
-
-	func _DataReceived(_peerId: int) -> void:
-		_Trpc._ParsePeerPacket(_wsServer.get_peer(_peerId), true)
 #GODOG_SERVER
 
 
@@ -87,18 +87,6 @@ class TrpcClient extends Node:
 			#GODOG_IGNORE
 			_Trpc._ClientPeer = null
 			call_deferred("ConnectToHost")
-
-
-	func _process(_delta: float) -> void:
-		_wsClient.poll()
-
-
-	func _ready() -> void:
-		_wsClient.connect("data_received", self, "_DataReceived")
-		_wsClient.connect("connection_error", self, "_ConnectionClosed")
-		_wsClient.connect("connection_closed", self, "_ConnectionClosed")
-		_wsClient.connect("connection_established", self, "_ConnectionEstablished")
-		call_deferred("ConnectToHost")
 
 
 	func _ConnectionClosed(_wasClean: bool = false) -> void:
@@ -120,6 +108,18 @@ class TrpcClient extends Node:
 
 	func _DataReceived() -> void:
 		_Trpc._ParsePeerPacket(_wsClient.get_peer(1), false)
+
+
+	func _ready() -> void:
+		_wsClient.connect("data_received", self, "_DataReceived")
+		_wsClient.connect("connection_error", self, "_ConnectionClosed")
+		_wsClient.connect("connection_closed", self, "_ConnectionClosed")
+		_wsClient.connect("connection_established", self, "_ConnectionEstablished")
+		call_deferred("ConnectToHost")
+
+
+	func _process(_delta: float) -> void:
+		_wsClient.poll()
 #GODOG_CLIENT
 
 
