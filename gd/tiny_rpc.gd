@@ -14,15 +14,21 @@ signal ServerCloseRequest(_closeCode, _closeReason)
 
 #GODOG_PRIVATE: _FuncMap, _ClientPeer
 var _FuncMap := {}
+#GODOG_CLIENT
 var _ClientPeer: WebSocketPeer
+#GODOG_CLIENT
 
 export var ServerPort := 12345
 export var ServerAddress := ""
+#GODOG_CLIENT
+export var ConnectToHostInDebug := false
+#GODOG_CLIENT
+#GODOG_SERVER
 export var MaxConnections := 4096
 export var BufferMaxLength := 131072 # 128 KiB
-export var ConnectToHostInDebug := false
 export(String, FILE, "*.crt") var SslPublicKeyPath := ""
 export(String, FILE, "*.key") var SslPrivateKeyPath := ""
+#GODOG_SERVER
 
 
 #GODOG_SERVER
@@ -90,10 +96,14 @@ class TrpcClient extends Node:
 	onready var _Trpc := get_parent()
 
 
+	func GetFullAddress() -> String:
+		return str(_Trpc.ServerAddress, ":", _Trpc.ServerPort)
+
+
 	func ConnectToHost() -> void:
-		if _wsClient.connect_to_url(_Trpc.ServerAddress) != OK:
+		if _wsClient.connect_to_url(GetFullAddress()) != OK:
 			#GODOG_IGNORE
-			printerr("Failed to issue the connection to the address %s, retrying..." % _Trpc.ServerAddress)
+			printerr("Failed to issue the connection to the address %s, retrying..." % GetFullAddress())
 			#GODOG_IGNORE
 			_Trpc._ClientPeer = null
 			call_deferred("ConnectToHost")
@@ -112,7 +122,7 @@ class TrpcClient extends Node:
 		_Trpc._ClientPeer = _wsClient.get_peer(1)
 		_Trpc.emit_signal("ClientConnected")
 		#GODOG_IGNORE
-		print("Connected to host %s." % _Trpc.ServerAddress)
+		print("Connected to host %s." % GetFullAddress())
 		#GODOG_IGNORE
 
 
