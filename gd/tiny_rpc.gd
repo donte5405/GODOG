@@ -17,6 +17,7 @@ var _ClientPeer: WebSocketPeer
 
 export var ServerPort := 12345
 export var ServerAddress := ""
+export var MaxConnections := 4096
 export var BufferMaxLength := 131072 # 128 KiB
 export var ConnectToHostInDebug := false
 export(String, FILE, "*.crt") var SslPublicKeyPath := ""
@@ -27,23 +28,30 @@ export(String, FILE, "*.key") var SslPrivateKeyPath := ""
 class TrpcServer extends Node:
 	#GODOG_PRIVATE: _bufferMaxLength, _serverPort, _wsServer, _Trpc
 	var _wsServer := WebSocketServer.new()
+	var _currentConnections := 0
 
 	onready var _Trpc := get_parent()
 
 
+	func CountConnections(_newConnections: int) -> void:
+		_currentConnections += _newConnections
+		_wsServer.refuse_new_connections = _currentConnections >= _Trpc.MaxConnections
+
+
 	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
-		_wsServer.get_peer(_peerId).get_connected_host()
+		CountConnections(1)
 		_Trpc.emit_signal("PeerConnected", _peerId)
 		print("OPEN ip: %s, id =  %d, proto = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _protocol])
 
 
 	func _PeerCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
-		print("CLOSE_REQ ip: %s, id =  %d, code = %d, reason = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
+		print("CLOSE REQ ip: %s, id =  %d, code = %d, reason = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
 	
 
 	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
+		CountConnections(-1)
 		_Trpc.emit_signal("PeerDisconnected", _peerId)
-		print("CLOSE ip: %s, id =  %d, clean = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, str(_wasClean)])
+		print("CLOSE IP: %s, id =  %d, clean = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, str(_wasClean)])
 
 
 	func _DataReceived(_peerId: int) -> void:
