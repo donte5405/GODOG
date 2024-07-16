@@ -39,33 +39,35 @@ class TrpcServer extends Node:
 			_privateKey.load(_Trpc.SslPrivateKeyPath)
 			_wsServer.ssl_certificate = _publicKey
 			_wsServer.private_key = _privateKey
-		_wsServer.connect("client_connected", self, "_clientConnected")
-		_wsServer.connect("client_disconnected", self, "_clientDisconnected")
-		_wsServer.connect("client_close_request", self, "_clientCloseRequest")
-		_wsServer.connect("data_received", self, "_dataReceived")
+		_wsServer.connect("client_connected", self, "_PeerConnected")
+		_wsServer.connect("client_disconnected", self, "_PeerDisconnected")
+		_wsServer.connect("client_close_request", self, "_PeerCloseRequest")
+		_wsServer.connect("data_received", self, "_DataReceived")
 		if _wsServer.listen(_Trpc.ServerPort) != OK:
 			printerr("Unable to start a server at port %d." % _Trpc.ServerPort)
 			return
-		else:
-			get_tree().connect("idle_frame", _wsServer, "poll")
 
 
-	func _clientConnected(_peerId: int, _protocol: String = "") -> void:
+	func _process(_delta: float) -> void:
+		_wsServer.poll()
+
+
+	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
 		_wsServer.get_peer(_peerId).get_connected_host()
 		_Trpc.emit_signal("PeerConnected", _peerId)
 		print("OPEN ip: %s, id =  %d, proto = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _protocol])
 
 
-	func _clientCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
+	func _PeerCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
 		print("CLOSE_REQ ip: %s, id =  %d, code = %d, reason = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
 	
 
-	func _clientDisconnected(_peerId: int, _wasClean: bool = false) -> void:
+	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
 		_Trpc.emit_signal("PeerDisconnected", _peerId)
 		print("CLOSE ip: %s, id =  %d, clean = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, str(_wasClean)])
 
 
-	func _dataReceived(_peerId: int) -> void:
+	func _DataReceived(_peerId: int) -> void:
 		_Trpc._ParsePeerPacket(_wsServer.get_peer(_peerId), true)
 #GODOG_SERVER
 
@@ -87,15 +89,19 @@ class TrpcClient extends Node:
 			call_deferred("ConnectToHost")
 
 
+	func _process(_delta: float) -> void:
+		_wsClient.poll()
+
+
 	func _ready() -> void:
-		_wsClient.connect("data_received", self, "_dataReceived")
-		_wsClient.connect("connection_error", self, "_connectionClosed")
-		_wsClient.connect("connection_closed", self, "_connectionClosed")
-		_wsClient.connect("connection_established", self, "_connectionEstablished")
+		_wsClient.connect("data_received", self, "_DataReceived")
+		_wsClient.connect("connection_error", self, "_ConnectionClosed")
+		_wsClient.connect("connection_closed", self, "_ConnectionClosed")
+		_wsClient.connect("connection_established", self, "_ConnectionEstablished")
 		call_deferred("ConnectToHost")
 
 
-	func _connectionClosed(_wasClean: bool = false) -> void:
+	func _ConnectionClosed(_wasClean: bool = false) -> void:
 		get_tree().disconnect("idle_frame", _wsClient, "poll")
 		_Trpc.emit_signal("ClientDisconnected")
 		call_deferred("ConnectToHost")
@@ -104,16 +110,15 @@ class TrpcClient extends Node:
 		#GODOG_IGNORE
 	
 
-	func _connectionEstablished(_proto: String = "") -> void:
+	func _ConnectionEstablished(_proto: String = "") -> void:
 		_Trpc._ClientPeer = _wsClient.get_peer(1)
-		get_tree().connect("idle_frame", _wsClient, "poll")
 		_Trpc.emit_signal("ClientConnected")
 		#GODOG_IGNORE
 		print("Connected to host %s." % _Trpc.ServerAddress)
 		#GODOG_IGNORE
 
 
-	func _dataReceived() -> void:
+	func _DataReceived() -> void:
 		_Trpc._ParsePeerPacket(_wsClient.get_peer(1), false)
 #GODOG_CLIENT
 
