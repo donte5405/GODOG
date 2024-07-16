@@ -8,6 +8,7 @@ signal PeerDisconnected(id)
 #GODOG_CLIENT
 signal ClientConnected()
 signal ClientDisconnected()
+signal ServerCloseRequest(_closeCode, _closeReason)
 #GODOG_CLIENT
 
 
@@ -26,9 +27,9 @@ export(String, FILE, "*.key") var SslPrivateKeyPath := ""
 
 #GODOG_SERVER
 class TrpcServer extends Node:
-	#GODOG_PRIVATE: _bufferMaxLength, _serverPort, _wsServer, _Trpc
-	var _wsServer := WebSocketServer.new()
+	#GODOG_PRIVATE: _currentConnections, _wsServer, _Trpc
 	var _currentConnections := 0
+	var _wsServer := WebSocketServer.new()
 
 	onready var _Trpc := get_parent()
 
@@ -82,7 +83,8 @@ class TrpcServer extends Node:
 
 #GODOG_CLIENT
 class TrpcClient extends Node:
-	#GODOG_PRIVATE: _hostAddress, _wsClient
+	#GODOG_PRIVATE: _serverClosed, _wsClient
+	var _serverClosed := false
 	var _wsClient := WebSocketClient.new()
 
 	onready var _Trpc := get_parent()
@@ -98,13 +100,13 @@ class TrpcClient extends Node:
 
 
 	func _ConnectionClosed(_wasClean: bool = false) -> void:
-		get_tree().disconnect("idle_frame", _wsClient, "poll")
 		_Trpc.emit_signal("ClientDisconnected")
-		call_deferred("ConnectToHost")
-		#GODOG_IGNORE
-		printerr("Connection closed, reconnecting...")
-		#GODOG_IGNORE
-	
+		if not _serverClosed:
+			call_deferred("ConnectToHost")
+			#GODOG_IGNORE
+			printerr("Connection closed, reconnecting...")
+			#GODOG_IGNORE
+
 
 	func _ConnectionEstablished(_proto: String = "") -> void:
 		_Trpc._ClientPeer = _wsClient.get_peer(1)
@@ -118,11 +120,17 @@ class TrpcClient extends Node:
 		_Trpc._ParsePeerPacket(_wsClient.get_peer(1), false)
 
 
+	func _ServerCloseRequest(_code: int, _reason: String) -> void:
+		_serverClosed = true
+		_Trpc.emit_signal("ServerCloseRequest", _code, _reason)
+
+
 	func _ready() -> void:
 		_wsClient.connect("data_received", self, "_DataReceived")
 		_wsClient.connect("connection_error", self, "_ConnectionClosed")
 		_wsClient.connect("connection_closed", self, "_ConnectionClosed")
 		_wsClient.connect("connection_established", self, "_ConnectionEstablished")
+		_wsClient.connect("server_close_request", self, "_ServerCloseRequest")
 		call_deferred("ConnectToHost")
 
 
