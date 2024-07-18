@@ -356,6 +356,14 @@ export function assemble(token, mode = "gd") {
 					(isString(t1st) && isLabel(t2nd)) || (isLabel(t1st) && isString(t2nd))
 				) {
 					newToken.push(" ");
+				} else if (t2nd != "\n") {
+					if (
+						(mode == "gd" && t1st[0] === "#") ||
+						(mode == "clang" && t1st[0] === "/" && (["/", "*"].includes(t1st[1]))) ||
+						(mode == "tscn" && t1st[0] === ";")
+					) {
+						newToken.push("\n");
+					}
 				}
 			}
 		}
