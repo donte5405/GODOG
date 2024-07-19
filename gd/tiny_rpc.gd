@@ -18,6 +18,7 @@ var _FuncMap := {}
 var _ClientPeer: WebSocketPeer
 #GODOG_CLIENT
 
+export var UseJson := true
 export var ServerPort := 12345
 export var ServerAddress := ""
 #GODOG_CLIENT
@@ -65,6 +66,10 @@ class TrpcServer extends Node:
 		_Trpc._ParsePeerPacket(_wsServer.get_peer(_peerId), true)
 
 
+	func _DataReceivedJson(_peerId: int) -> void:
+		_Trpc._ParsePeerPacketJson(_wsServer.get_peer(_peerId), true)
+
+
 	func _ready() -> void:
 		if _Trpc.SslPublicKeyPath and _Trpc.SslPrivateKeyPath:
 			var _publicKey := X509Certificate.new()
@@ -76,7 +81,7 @@ class TrpcServer extends Node:
 		_wsServer.connect("client_connected", self, "_PeerConnected")
 		_wsServer.connect("client_disconnected", self, "_PeerDisconnected")
 		_wsServer.connect("client_close_request", self, "_PeerCloseRequest")
-		_wsServer.connect("data_received", self, "_DataReceived")
+		_wsServer.connect("data_received", self, "_DataReceivedJson" if _Trpc.UseJson else "_DataReceived")
 		if _wsServer.listen(_Trpc.ServerPort) != OK:
 			printerr("Unable to start a server at port %d." % _Trpc.ServerPort)
 			return
@@ -128,6 +133,10 @@ class TrpcClient extends Node:
 
 	func _DataReceived() -> void:
 		_Trpc._ParsePeerPacket(_wsClient.get_peer(1), false)
+	
+
+	func _DataReceivedJson() -> void:
+		_Trpc._ParsePeerPacketJson(_wsClient.get_peer(1), false)
 
 
 	func _ServerCloseRequest(_code: int, _reason: String) -> void:
@@ -136,11 +145,11 @@ class TrpcClient extends Node:
 
 
 	func _ready() -> void:
-		_wsClient.connect("data_received", self, "_DataReceived")
 		_wsClient.connect("connection_error", self, "_ConnectionClosed")
 		_wsClient.connect("connection_closed", self, "_ConnectionClosed")
 		_wsClient.connect("connection_established", self, "_ConnectionEstablished")
 		_wsClient.connect("server_close_request", self, "_ServerCloseRequest")
+		_wsClient.connect("data_received", self, "_DataReceivedJson" if _Trpc.UseJson else "_DataReceived")
 		call_deferred("ConnectToHost")
 
 
@@ -150,16 +159,35 @@ class TrpcClient extends Node:
 
 
 func _ParsePeerPacket(_peer: WebSocketPeer, _isServer: bool) -> void:
-	var _pkt := _peer.get_packet()
-	if _pkt.empty():
+	var _str := _peer.get_packet().get_string_from_utf8()
+	if _str.empty():
 		#GODOG_SERVER
 		printerr("%s Sent an empty packet." % _peer.get_connected_host())
 		#GODOG_SERVER
 		return
-	var _obj = str2var(_pkt.get_string_from_utf8())
+	for _sName in [ "CSharpScript", "GDScript", "VisualScript" ]: # This is just a bandage solution, I don't trust this.
+		if _sName in _str:
+			return
+	var _obj = str2var(_str)
 	if typeof(_obj) != TYPE_ARRAY:
 		#GODOG_SERVER
 		printerr("%s Sent an invalid data type packet, not an array." % _peer.get_connected_host())
+		#GODOG_SERVER
+		return
+	_DispatchFuncCall(_peer, _isServer, _obj)
+
+
+func _ParsePeerPacketJson(_peer: WebSocketPeer, _isServer: bool) -> void:
+	var _str := _peer.get_packet().get_string_from_utf8()
+	if _str.empty():
+		#GODOG_SERVER
+		printerr("%s Sent an empty packet." % _peer.get_connected_host())
+		#GODOG_SERVER
+		return
+	var _obj = JSON.parse(_str).result
+	if typeof(_obj) != TYPE_ARRAY:
+		#GODOG_SERVER
+		printerr("%s Sent an invalid JSON data type packet, not an array." % _peer.get_connected_host())
 		#GODOG_SERVER
 		return
 	_DispatchFuncCall(_peer, _isServer, _obj)
