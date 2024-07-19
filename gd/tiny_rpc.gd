@@ -225,7 +225,10 @@ func _Rpc(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 		printerr("Invalid RPC: %s" % var2str(_funcArgs))
 		#GODOG_SERVER
 		return
-	_peer.put_packet(var2str(_funcArgs).to_utf8())
+	if UseJson:
+		_peer.put_packet(JSON.print(_funcArgs).to_utf8())
+	else:
+		_peer.put_packet(var2str(_funcArgs).to_utf8())
 
 
 #GODOG_CLIENT
