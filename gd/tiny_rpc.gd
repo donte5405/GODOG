@@ -262,7 +262,7 @@ func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String = "") ->
 		_objFuncName = _funcName
 	if _objFuncName in _FuncMap:
 		#GODOG_IGNORE
-		printerr("'%s' already got registered, replacing...")
+		printerr("'%s' already got registered, replacing..." % _funcName)
 		#GODOG_IGNORE
 		pass
 	_FuncMap[_funcName] = funcref(_obj, _objFuncName)
