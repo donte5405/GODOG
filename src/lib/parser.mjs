@@ -232,12 +232,20 @@ export class GDParser {
     /**
      * Get a private label mapped to the specified source label.
      * @param {string} sourceLabel 
+     * @param {string[]} tokens
+     * @param {number} currentPos
      */
-    _getOrAddPrivateLabel(sourceLabel, fromUser = false) {
+    _getOrAddPrivateLabel(sourceLabel, tokens, currentPos, fromUser = false) {
         if (!this.privateLabels[sourceLabel]) {
-            this.privateLabels[sourceLabel] = labels.get();
+            const privateLabel = labels.get();
+            this.privateLabels[sourceLabel] = privateLabel;
             if (fromUser) {
-                this.userPrivateLabels[sourceLabel] = this.privateLabels[sourceLabel];
+                this.userPrivateLabels[sourceLabel] = privateLabel;
+            }
+            for (let ii = 0; ii < currentPos; ii++) {
+                if (tokens[ii] === labels.get(sourceLabel)) {
+                    tokens[ii] = privateLabel;
+                }
             }
         }
         return this.privateLabels[sourceLabel];
@@ -295,14 +303,8 @@ export class GDParser {
                     if (tokenNsp.indexOf("#GODOG_PRIVATE:") === 0) {
                         // Define private labels.
                         const privateLabels = tokenNsp.split("#GODOG_PRIVATE:")[1].split(",");
-                        for (const privateLabel of privateLabels) {
-                            const label = this._getOrAddPrivateLabel(privateLabel, true);
-                            // Reformat all previous tokens.
-                            for (let ii = 0; ii < i; ii++) {
-                                if (tokens[ii] === labels.get(privateLabel)) {
-                                    tokens[ii] = label;
-                                }
-                            }
+                        for (const sourceLabel of privateLabels) {
+                            this._getOrAddPrivateLabel(sourceLabel, tokens, i - 1, true);
                         }
                         // Remove comment.
                         return "";
@@ -469,15 +471,15 @@ export class GDParser {
                             continue;
                         }
                         if ([",", "("].includes(tokens[i - 1])) {
-                            this._getOrAddPrivateLabel(tokens[i]);
+                            this._getOrAddPrivateLabel(bToken, tokens, i - 1);
                         }
                     }
                     return token;
                 }
-                if (token === "var") {
+                if ([ "var", "for" ].includes(token)) {
                     // Note private labels created by local `var` constructors.
                     if (this.currentClassIndent === countIndents(tokens, i)) return token;
-                    this._getOrAddPrivateLabel(tokens[i + 1]);
+                    this._getOrAddPrivateLabel(tokens[i + 1], tokens, i - 1);
                     return token;
                 }
                 // Try to get rid of type casting if possible.
