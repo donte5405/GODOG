@@ -61,6 +61,7 @@ class TrpcServer extends Node:
 		#GODOG_IGNORE
 		print("CLOSE REQ ip: %s, id =  %d, code = %d, reason = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
 		#GODOG_IGNORE
+		pass
 	
 
 	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
