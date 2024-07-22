@@ -61,10 +61,10 @@ export function fileList(dir, excludeDirsWithFiles = [], ignoredFiles = [], file
     }
     Fs.readdirSync(dir).forEach(file => {
         if (ignoredFiles.includes(file)) return;
-        switch (file[0]) {
-            case ".":
-                return;
-        }
+        // switch (file[0]) {
+        //     case ".":
+        //         return;
+        // }
         const absolute = Path.join(dir, file);
         if (Fs.statSync(absolute).isDirectory()) {
             fileList(absolute, excludeDirsWithFiles, ignoredFiles, files);

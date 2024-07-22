@@ -103,7 +103,7 @@ await filesCopySelectively(dirLocation, tempLocation);
 
 // Delete all nastiness from the temp directory.
 // E.g., debug files and configurations.
-for (const fileName of [ "dbg.sym.json", "godog.json" ]) {
+for (const fileName of [ ".import", "dbg.sym.json", "godog.json" ]) {
     await rm(join(tempLocation, fileName), fsOptions);
 }
 
