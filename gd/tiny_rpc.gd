@@ -17,6 +17,9 @@ var _FuncMap := {}
 #GODOG_CLIENT
 var _ClientPeer: WebSocketPeer
 #GODOG_CLIENT
+#GODOG_SERVER
+var _dummyPeerStorage := {}
+#GODOG_SERVER
 
 export var UseJson := true
 export var ServerPort := 12345
@@ -249,6 +252,19 @@ func Request(_funcArgs: Array) -> void:
 
 
 #GODOG_SERVER
+func GetPeerStorage(_peer: WebSocketPeer) -> Dictionary:
+	#GODOG_IGNORE
+	return _dummyPeerStorage
+	#GODOG_IGNORE
+	if not _peer.has_meta("PEER_STORAGE"):
+		_peer.set_meta("PEER_STORAGE", {})
+	return _peer.get_meta("PEER_STORAGE")
+
+
+func Pass(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+	_DispatchFuncCall(_peer, true, _funcArgs)
+
+
 func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 	if _peer:
 		_Rpc(_peer, _funcArgs)
