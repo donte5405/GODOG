@@ -26,6 +26,10 @@ const parser = new XMLParser({
 });
 
 
+/** @type {string[]} */
+let loadedLabels = [];
+
+
 /**
  * @param {string[]} labels
  * @param {string} str 
@@ -177,7 +181,10 @@ export async function loadGodotLabels(sourcePath = "") {
         return labels;
     }
     try {
-        return JSON.parse(await readFile(cachePath, { encoding: "utf-8" }));
+        if (loadedLabels.length === 0) {
+            loadedLabels = JSON.parse(await readFile(cachePath, { encoding: "utf-8" }))
+        }
+        return loadedLabels;
     } catch (e) {
         console.error(e);
         throw errFailLabelCacheLoad(cachePath);
