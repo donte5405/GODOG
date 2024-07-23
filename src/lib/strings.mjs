@@ -324,6 +324,11 @@ export function getLabelsFromStringBlocksInCLangString(str, labels = []) {
     for (let i = 0; i < str.length; i++) {
         let c = str[i];
         if (asciiSymbols.includes(c)) {
+            if (c === "\t" || c === " ") {
+                // Strings with space are likely irrelevant.
+                labels.length = 0;
+                return labels;
+            }
             if ("%\\".includes(str[i - buffer.length - 1])) {
                 nuke();
             } else {
