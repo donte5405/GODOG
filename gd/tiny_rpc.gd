@@ -253,6 +253,13 @@ func Request(_funcArgs: Array) -> void:
 
 
 #GODOG_SERVER
+func GetPeerAddress(_peer: WebSocketPeer) -> String:
+	#GODOG_IGNORE
+	return "localhost"
+	#GODOG_IGNORE
+	return _peer.get_connected_host()
+
+
 func GetPeerStorage(_peer: WebSocketPeer) -> Dictionary:
 	#GODOG_IGNORE
 	return _dummyPeerStorage
