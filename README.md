@@ -278,13 +278,13 @@ node node src/main.mjs /path/to/your/project /path/to/client/directory /path/to/
 This will now allow the project to be exporetd.
 
 
-#### 4. Ignoring files
-By default, GODOG will ignore file names that start with dot (`.`). You can also ignore entire directory by adding a file `.gdignore` just like regular Godot. However, in case that you still want to use debug files in the development, `.gdignore` will not work.
+#### 4. Ignoring Files
+You can ignore entire directory by adding a file `.gdignore` just like regular Godot. However, in case that you still want to use debug files in the development, `.gdignore` will not work.
 
 GODOG provides three ways to ignore entire directory. The first one is obviously by adding `.gdignore` to the directory, with a side effect of your editor will not recognise any files in it. Second option is by adding `godogignore` this tells Godot to see files inside, but will be ignored in the export release. Lastly, by adding `godogclient` and `godogserver`, it will also help isolating between server and client resource exports.
 
 
-#### 5. Ignoring GDScript files
+#### 5. Ignoring GDScript Files
 Sometimes you want some GDScript files to be in its original location in case where you need portable serialisation (notably, game loading and saving scripts, and savable resource files). Adding `#GODOG_EXPOSE_FILE` anywhere in the file will tell GODOG to keep its location intact.
 
 However, this option WON'T ignore the file and will still scramble user labels inside it. You still need to fine tune what should be exposed manually.

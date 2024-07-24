@@ -314,7 +314,6 @@ export class GDParser {
                             myBannedLabels.push(label);
                             bannedLabels.push(label);
                         }
-                        // Remove comment.
                         return "";
                     }
                     if (tokenNsp.indexOf("#GODOG_EXPOSE_FILE") === 0) {
@@ -337,7 +336,6 @@ export class GDParser {
                         for (const sourceLabel of privateLabels) {
                             this._getOrAddPrivateLabel(sourceLabel, tokens, i - 1, true);
                         }
-                        // Remove comment.
                         return "";
                     }
                     // Remove comment.
