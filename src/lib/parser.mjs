@@ -278,11 +278,13 @@ export class GDParser {
                 // Parse comment.
                 if (token[0] === "#") {
                     const tokenNsp = token.split(" ").join("");
-                    for (const block of crucialPreprocessorBlocks) {
-                        if (tokenNsp.indexOf(block) === 0) {
-                            config.crucialPreprocessorsDetected = true;
-                            // Keep the comment for now, will use platform-specific preprocessors.
-                            return token;
+                    if (!config.ignoreCrucialPreprocessors) {
+                        for (const block of crucialPreprocessorBlocks) {
+                            if (tokenNsp.indexOf(block) === 0) {
+                                config.crucialPreprocessorsDetected = true;
+                                // Keep the comment for now, will use platform-specific preprocessors.
+                                return token;
+                            }
                         }
                     }
                     if (tokenNsp.indexOf("#GODOG_EXPOSE:") === 0) {
@@ -296,6 +298,10 @@ export class GDParser {
                         return "";
                     }
                     if (tokenNsp.indexOf("#GODOG_IGNORE") === 0) {
+                        if (config.keepIgnoreBlocks) {
+                            // Keep ignore blocks.
+                            return "";
+                        }
                         // Ignore code blocks that aren't required.
                         this.isInIgnoreBlock = !this.isInIgnoreBlock;
                         return "";

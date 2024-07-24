@@ -33,6 +33,8 @@ export class Configuration {
     get removeTypeCasting() { return this.check("removeTypeCasting"); }
     /** If this project will ignore crucial preprocessors and skip source code leak risks altogether. */
     get ignoreCrucialPreprocessors() { return this.check("ignoreCrucialPreprocessors"); }
+    /** If this project will keep all ignore blocks, useful for exporting debug builds. */
+    get keepIgnoreBlocks() { return this.check("keepIgnoreBlocks"); }
     /** If this project will have export parameters stripped. */
     get stripExportParams() { return this.check("noExportParams"); }
 

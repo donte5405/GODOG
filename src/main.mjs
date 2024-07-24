@@ -114,7 +114,7 @@ const tempLocationFiles = fileList(tempLocation);
 
 
 // Compress labels length.
-console.log("Compressing long-ass user labels...");
+console.log("Compressing user labels...");
 labels.compress();
 
 
@@ -149,7 +149,7 @@ for (const translationKey of Object.keys(translations)) {
 }
 
 
-if (dirOutServerLocation) { // Export server version.
+if (dirOutServerLocation && !config.ignoreCrucialPreprocessors) { // Export server version.
     console.log("Building both client and server versions...");
     for (const [ destPath, excludedDirWithFile, blockIndicator ] of [
         [ dirOutLocation, "godogserver", "#GODOG_SERVER" ], // Client directory.
