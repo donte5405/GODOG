@@ -21,6 +21,7 @@ import {
     processNodePath,
 } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
+import { dontMeltPath } from "./melt.mjs";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
 // import { fileURLToPath } from "url";
@@ -154,6 +155,8 @@ export class GDParser {
     privateLabels = {};
     /** Filename that the parser is handling. Does nothing except warning users. */
     fileName = "";
+    /** Root directory. */
+    rootDirectory = "";
     /** If this parser is still in ignore block. */
     isInIgnoreBlock = false;
 
@@ -168,10 +171,11 @@ export class GDParser {
     /**
      * Parse a file and get the result immediately.
      * @param {string} fileName
+     * @param {string} rootDirectory
      * @param {"gd"|"clang"|"tscn"|"path"} mode
      */
-    static async parseFile(fileName, mode = "gd") {
-        return new this(mode).tellFileName(fileName).parse(await readFile(fileName, { encoding: "utf-8" }), mode);
+    static async parseFile(fileName, rootDirectory, mode = "gd") {
+        return new this(mode).tellFileName(fileName).tellRootDirectory(rootDirectory).parse(await readFile(fileName, { encoding: "utf-8" }), mode);
     }
 
     /**
@@ -200,6 +204,22 @@ export class GDParser {
     tellFileName(name) {
         this.fileName = name;
         return this;
+    }
+
+    /**
+     * Tell root directory name that this parser is handling.
+     * @param {string} name 
+     */
+    tellRootDirectory(name) {
+        this.rootDirectory = name;
+        return this;
+    }
+
+    /**
+     * Get file path without root directory.
+     */
+    getFileNameWithoutRoot() {
+        return this.fileName.slice(this.rootDirectory.length + 1, this.fileName.length);
     }
 
     /**
@@ -295,6 +315,11 @@ export class GDParser {
                             bannedLabels.push(label);
                         }
                         // Remove comment.
+                        return "";
+                    }
+                    if (tokenNsp.indexOf("#GODOG_EXPOSE_FILE") === 0) {
+                        // Tell Melt to not melt this file.
+                        dontMeltPath(this.getFileNameWithoutRoot());
                         return "";
                     }
                     if (tokenNsp.indexOf("#GODOG_IGNORE") === 0) {

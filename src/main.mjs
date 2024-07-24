@@ -45,10 +45,10 @@ console.log("Analysing the entire project...");
 for (const fileLocation of fileList(dirLocation)) {
     if (checkFileExtension(fileLocation, "gd")) {
         // Check GDScripts.
-        await GDParser.parseFile(fileLocation);
+        await GDParser.parseFile(fileLocation, dirLocation);
     } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Check GDResources.
-        await GDParser.parseFile(fileLocation, "tscn");
+        await GDParser.parseFile(fileLocation, dirLocation, "tscn");
     } else if (checkFileExtension(fileLocation, "csv")) {
         // Check CSV.
         parseLocaleCsv(await readFile(fileLocation, { encoding: "utf-8" }));
@@ -127,10 +127,10 @@ console.log("Screwing entire project...");
 for (const fileLocation of tempLocationFiles) {
     if (checkFileExtension(fileLocation, "gd")) {
         // Parse GDScript.
-        await writeFile(fileLocation, await GDParser.parseFile(fileLocation));
+        await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation));
     } else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
         // Parse GDResources.
-        await writeFile(fileLocation, await GDParser.parseFile(fileLocation, "tscn"));
+        await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation, "tscn"));
     } else if (checkFileExtension(fileLocation, "csv")) {
         // Parse CSV.
         let str = await readFile(fileLocation, { encoding: "utf-8" });

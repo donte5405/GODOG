@@ -10,6 +10,10 @@ import { join } from "path";
 const PROJECT_FILE_NAME = "project.godot";
 
 
+/** @type {string[]} List of file paths to not melt. */
+const pathsToNotMelt = [];
+
+
 /** @type {Record<string, Remap>} */
 const allRemaps = {};
 /** @type {Remap[]} */
@@ -114,6 +118,16 @@ class Remap {
 
 
 /**
+ * Tell Melt to not melt this path.
+ * @param {string} path 
+ */
+export function dontMeltPath(path) {
+	if (pathsToNotMelt.includes(path)) return;
+	pathsToNotMelt.push(path);
+}
+
+
+/**
  * "Melt" directory into incomprehensible state.
  * @param {string} rootPath 
  * @param {Labels} labels
@@ -133,6 +147,10 @@ export async function meltDirectory(rootPath, labels) {
 	for (const filePath of filePaths) {
 		const map = remap(rootPath, filePath);
 		const oldPath = map.oldPath;
+		if (pathsToNotMelt.includes(oldPath)) {
+			// Don't melt user specified files.
+			continue;
+		}
 		if (checkFileExtension(oldPath, [ "cfg", "godot", "csv" ]) || hasFile("default_env.tres", oldPath)) {
 			insertMap(map, mapsToChange);
         }
