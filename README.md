@@ -155,7 +155,7 @@ export var xZ := ""
 ```
 
 - `keepIgnoreBlocks`: `boolean`
-// This tells GODOG to keep all blocks in `#GODOG_IGNORE`. **This should always be disabled unless you absolutely know what you're doing.**
+Tells GODOG to keep all blocks in `#GODOG_IGNORE`. **This should always be disabled unless you absolutely know what you're doing.**
 - `ignoreCrucialPreprocessors`: `boolean`
 Tells GODOG to skip processing crucial preprocessors completely, notably client & server preprocessors. **This should always be disabled unless you absolutely know what you're doing.**
 
