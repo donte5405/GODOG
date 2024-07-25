@@ -128,7 +128,7 @@ Then write the file in JSON fashion as usual.
 ```
 
 - `scrambleGodotFiles`: `boolean`
-Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the project's root directory.
+Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the project's root directory. This usually doesn't cause any issues as long as you don't make any attempts to access resource files using string formatting methods.
 - `removeTypeCasting`: `boolean`
 Tells GODOG to remove type castings from your code. This can be unpreferable since this tends to break code. During type casting, Godot will also try to convert value during parameter passings to specified type. Without type casting, values may be left as-is and become especially unsafe to deal with especially with JSON objects. If you are willing to fix your code for sake of more obscure source exports, enable this option.
 - `noExportParams`: `boolean`
@@ -238,6 +238,7 @@ func MultiParamFunc(
 			3,
 		],
 		MyNestedParam = {
+			#GODOG_EXPOSE: A, B
 			Person1 = "A",
 			Person2 = "B",	# This comment should disappear.
 		}
@@ -573,9 +574,10 @@ _trCharacterIcon.texture = load(tr("PathDefaultCharacterIcon"))
 ---
 
 ### Limitations
-- Only works with Godot 3.x at the moment.
+- Only works with Godot 3.x at the moment (Godot 4.x may work, but it's not tested).
 - GDScript is the only supported scripting langauge.
 - **Resource mapping with string formatting will not work!**
+- Shaders aren't tested. If it seems to break, workaround it by `#GODOG_EXPOSE` with its named parameters.
 	(Example: `"res://scn/scn_game_%d.tscn" % index`, `"Path/To/My/Node%d" % index`)
 - **It loves destroying GUI strings. To avoid the issue, store readable strings in translation files instead.**
 
