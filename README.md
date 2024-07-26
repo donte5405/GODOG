@@ -122,7 +122,7 @@ Then write the file in JSON fashion as usual.
     "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
     "removeTypeCasting": false, // This tells GODOG to also remove type castings.
     "noExportParams": false, // This tells GODOG to strip away export parameters.
-	"keepIgnoreBlocks": false, // This tells GODOG to keep all blocks in `#GODOG_IGNORE`.
+    "keepIgnoreBlocks": false, // This tells GODOG to keep all blocks in `#GODOG_IGNORE`.
     "ignoreCrucialPreprocessors": false // This will tell GODOG to skip crucial preprocessors completely.
 }
 ```
