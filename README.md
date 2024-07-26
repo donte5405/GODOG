@@ -323,30 +323,31 @@ Loading and saving has always been a hurdle for game developers especially on ho
 
 Automated binary serialisation is completely broken if using this project. While it's not apparent on the first but the side effect will be apparent on the next export revisions because string entries get swapped. This is not an issue in the past with games that run in machine code because most of them involve manual binary serialisation.
 
-**If your game uses binary serialisation for game saving, DON'T USE GODOG OR IT'LL CORRUPT YOUR SAVE FILES EVERY TIME YOUR GAME UPDATES.** If possible, don't even use this way of game saving because it introduces buffer overflow attack to the machine.
+**If your game uses binary serialisation functions from Godot (such as `bytes2var` and `var2bytes`) for game saving, DON'T USE GODOG OR IT'LL CORRUPT YOUR SAVE FILES EVERY TIME YOUR GAME UPDATES.** If possible, don't even use this way of game saving because it introduces buffer overflow attack to the machine.
 
-JSON serialisation generally works with GODOG, unless you write JSON in GDScript like this:
+JSON serialisation generally works with GODOG, but all strings will be butchered, including ones inside string syntaxes:
 
 ```gdscript
 {
     player_info = {
-        player_name = "Player",
-        experience = 0,
-        inventory = {
+		# Yes, all of these will be scrambled, including ones inside string syntaxes.
+        "player_name": "Player",
+        "experience": 0,
+        "inventory": {
             # blah, blah blah.
         }
     }
 }
 
 # Accessing Fields
-json.player_info.name
+json.player_info.player_name
 ```
 
-As you may already noticed, this exposes user-defined strings directly into GDScript source code, and GODOG will note them as user-defined labels and WILL SCRAMBLE THEM. This means that the game's save will only remain compatible for only one version of your game, and render API calls completely impossible since string names are altered. Fortunately, there are ways to workaround this issue. By converting the syntax to JSON-like will workaround this issue. Adding special characters to the string names will also help. Considering the snippet above, converting it gives this result instead:
+As you may already noticed, this exposes user-defined strings directly into GDScript source code without any additional `#GODOG_EXPOSE` preprocessors, and GODOG will note them as user-defined labels and WILL SCRAMBLE THEM. This means that the game's save will only remain compatible for only one version of your game, and render API calls completely impossible since string names are altered. Fortunately, there are ways to workaround this issue. By converting the syntax to JSON-like will workaround this issue. Adding special characters to the string names will also help. Considering the snippet above, converting it gives this result instead:
 
 ```gdscript
 var json := {
-    "@player_info": { # using '.' to avoind the string getting mangled.
+    "@player_info": { # using '@' to avoid the string getting mangled.
         "@player_name": "Player",
         "@experience": 0,
         "@inventory": {
@@ -359,9 +360,25 @@ var json := {
 json["@player_info"]["@player_name"]
 ```
 
-Another way around this is also by using `#GODOG_EXPOSE`, however this feature will expose the label "everywhere" instead of just a confined space. Learn how to use "wrong" name styles below to mitigate it.
+Another way around this is also by using `#GODOG_EXPOSE`, however this feature will expose the label "everywhere", not just the file that `#GODOG_EXPOSE` sits in.
 
-Noting that this way, your game's code will become easier to read when getting decompiled in the end, but nothing could be done in this case (except if you utilise translations tables, see below). If this must be used on a server API, it also must be smart enough to filter the extra characters added into the serialised JSON, as it will be explained below.
+```gdscript
+#GODOG_EXPOSE: player_info, player_name, experience, inventory
+{
+    player_info = {
+        "player_name": "Player",
+        "experience": 0,
+        "inventory": {
+            # blah, blah blah.
+        }
+    }
+}
+
+# Accessing Fields
+json.player_info.player_name
+```
+
+Noting that this way, your game's code will become easier to read when getting decompiled in the end, but nothing could be done in this case (except if you utilise translations tables, see below). However, if you're expecting GODOG to help scrambling API calls that will be used on server APIs, it's recommended to use debug symbols to help translating tables into readable data in the API sides, as it'll be explained in later section.
 
 ---
 
