@@ -352,6 +352,10 @@ export class GDParser {
                     }
                     return token;
                 }
+                if (tokens[i - 1] === ":" && token === "=") {
+                    tokens[i - 1] = "";
+                    return token;
+                }
             }
 
             // Parse user-defined strings.
