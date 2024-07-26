@@ -459,6 +459,14 @@ function trKeyExists(dict) {
 trKeyExists(dict)(username, password);
 ```
 
+Another way to prevent this attack is to make the API server demand string length more than the maximum size of minified strings. Usually for small-medium sized projects, GODOG generates labels with length around 4 characters or less. However, if the game has in-game chat and it's expected to have less than 4 characters per message in occasions, simply add empty space characters to the payload to workaround the issue.
+
+```js
+"no" -> "no   "    // add 3 empty space characters.
+"yes" -> "yes  "   // add 2 empty space characters.
+"maybe" -> "maybe" // add no empty space characters.
+```
+
 ---
 
 ### TIP: Using "Wrong" GDScript Name Styles
