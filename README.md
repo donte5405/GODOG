@@ -436,7 +436,7 @@ function translate(dict, obj) {
 
 This snippet also works to mitigate direct API calls with readable strings (in case if the bad actors somehow know the unmangled names) since the readable strings will be translated into mangled strings, rendering the attempt to access the API with readable names useless.
 
-However, this also leaves a vulnerability where the API can be exposed by some sort of mapping attack. Which means everything that involve custom strings should always be verified in the database that if it contains strings in the translation table and flag it as illegal operation.
+However, this also leaves a vulnerability where the API can be exposed by some sort of mapping attack. Which means everything that involve custom strings should always be verified with the imported debug symbols that if it contains strings in the translation table and flag it as illegal operation.
 
 Here's an example of JavaScript implementation of the verifier:
 
