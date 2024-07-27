@@ -225,10 +225,13 @@ func _DispatchFuncCall(_peer: WebSocketPeer, _isServer: bool, _funcArgs: Array) 
 		printerr("Function '%s' not found, RPC failed." % _funcName)
 		#GODOG_IGNORE
 		return
+	var _func: FuncRef = _FuncMap[_funcName]
+	if not _func.is_valid():
+		return
 	if _isServer:
-		(_FuncMap[_funcName] as FuncRef).call_funcv([ _peer ] + _funcArgs)
+		_func.call_funcv([ _peer ] + _funcArgs)
 	else:
-		(_FuncMap[_funcName] as FuncRef).call_funcv(_funcArgs)
+		_func.call_funcv(_funcArgs)
 
 
 func _Rpc(_peer: WebSocketPeer, _funcArgs: Array) -> void:
