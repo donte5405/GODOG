@@ -24,7 +24,7 @@ var _dummyPeerStorage := {}
 export var UseJson := true
 export var ServerPort := 12345
 export var ServerAddress := ""
-export var ServerDebugAddress := "" # This is not used by TinyRPC, but it's there for ease of debugging.
+export var ServerDebugAddress := "http://localhost" # This is not used by TinyRPC, but it's there for ease of debugging.
 #GODOG_CLIENT
 export var ConnectToHostInDebug := false
 #GODOG_CLIENT
