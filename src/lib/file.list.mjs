@@ -3,7 +3,7 @@ import * as Path from "path";
 import * as Fs from "fs";
 
 
-const excludedDirsWithFiles = [ ".gdignore", "godogignore" ];
+const excludedDirsWithFiles = [ "godogignore" ];
 
 
 /**
