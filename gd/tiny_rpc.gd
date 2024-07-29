@@ -273,7 +273,26 @@ func GetPeerStorage(_peer: WebSocketPeer) -> Dictionary:
 	return _peer.get_meta("PEER_STORAGE")
 
 
-func Pass(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+func GetServerUrl() -> String:
+	#GODOG_IGNORE
+	if OS.get_name() == "Server":
+	#GODOG_IGNORE
+	#GODOG_SERVER
+		return ServerAddress
+	#GODOG_SERVER
+	#GODOG_IGNORE
+	if not OS.is_debug_build() or ConnectToHostInDebug:
+	#GODOG_IGNORE
+	#GODOG_CLIENT
+		return ServerAddress
+	#GODOG_CLIENT
+	#GODOG_IGNORE
+	else:
+		return ServerDebugAddress
+	#GODOG_IGNORE
+
+
+func PassCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 	_DispatchFuncCall(_peer, true, _funcArgs)
 
 
