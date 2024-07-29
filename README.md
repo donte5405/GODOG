@@ -317,7 +317,7 @@ On the text display issue, simply workaround it by adding extra characters into 
 
 Loading and saving has always been a hurdle for game developers especially on how to manage it properly. This project made it even worse because if takes away every single user labels and replacing them with nonsense labels. This creates yet another hurdle for game saving.
 
-Automated binary serialisation is completely broken if using this project. While it's not apparent on the first but the side effect will be apparent on the next export revisions because string entries get swapped. This is not an issue in the past with games that run in machine code because most of them involve manual binary serialisation.
+Automated binary serialisation with built-in Godot functions will be completely broken. While it's not apparent on the first but in the next export revisions, named string entries will get swapped and break binary serialisation. This is not an issue in the past with games that run in machine code because most of them involve manual binary serialisation without string labels.
 
 **If your game uses binary serialisation functions from Godot (such as `bytes2var` and `var2bytes`) for game saving, DON'T USE GODOG OR IT'LL CORRUPT YOUR SAVE FILES EVERY TIME YOUR GAME UPDATES.** If possible, don't even use this way of game saving because it introduces buffer overflow attack to the machine.
 
