@@ -37,17 +37,14 @@ export function hasTranslations(str) {
  */
 export function parseTranslations(str) {
     const lines = str.split(trQuote);
-    if (lines.length % 2 === 0)
+    if (lines.length !== 3)
         throw errIncompleteTrQuote(str);
-    for (let i = 1; i < lines.length; i += 2) {
-        const trKey = lines[i].substring(1, lines[i].length - 1).split("\n").join(",");
-        /** @type {Record<string,string>} */
-        const json = JSON.parse(`{${trKey}}`);
-        const strid = randomUUID().split("-").join("");
-        for (const lang of Object.keys(json)) {
-            translations[md5(lang + "_" + strid)] = json[lang];
-        }
-        lines[i] = strid;
+    const trKey = lines[1].substring(1, lines[1].length - 1).split("\n").join(",");
+    /** @type {Record<string,string>} */
+    const json = JSON.parse(`{${trKey}}`);
+    const strid = randomUUID().split("-").join("");
+    for (const lang of Object.keys(json)) {
+        translations[md5(lang + "_" + strid)] = json[lang];
     }
-    return lines.join("");
+    return strid;
 }
