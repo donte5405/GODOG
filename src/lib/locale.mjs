@@ -7,7 +7,7 @@ import { md5 } from "./md5.mjs";
 const errIncompleteTrQuote = (str) => new Error(`There's incomplete enclosed quad underscore in the string below\n ${str}`);
 
 
-const trQuote = "_*_*_*_";
+const trQuote = "----- LOCALE -----";
 
 
 /** @type {Record<string,string>} List of mapped translations. */
@@ -40,8 +40,9 @@ export function parseTranslations(str) {
     if (lines.length % 2 === 0)
         throw errIncompleteTrQuote(str);
     for (let i = 1; i < lines.length; i += 2) {
+        const trKey = lines[i].substring(1, lines[i].length - 1).split("\n").join(",");
         /** @type {Record<string,string>} */
-        const json = JSON.parse(`{${lines[i]}}`);
+        const json = JSON.parse(`{${trKey}}`);
         const strid = randomUUID().split("-").join("");
         for (const lang of Object.keys(json)) {
             translations[md5(lang + "_" + strid)] = json[lang];

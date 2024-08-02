@@ -550,21 +550,46 @@ After GODOG manages to mangle CSV files, Godot also automatically converts  the 
 
 However, the disadvantage of this approach is that Godot's `TranslationServer` is in-memory. If the project has a lot of paragraph worthy of strings (depending on the project's size), it could instead be very undesirable to have them in the memory (especially on HTML5 platform). GODOG also offers a translator that helps on stream-based translations.
 
-To integrate disk-based translations. GODOG offers a syntax that helps in this regard. This can be done in any TSCN/TRES files by putting translation keys in `_*_*_*_` brackets:
+To integrate disk-based translations. GODOG offers a syntax that helps in this regard. This can be done in any TSCN/TRES files by putting translation keys in `----- LOCALE -----` brackets:
 
 ```
-_*_*_*_
-"en": "Hello!",
-"es": "¡Hola!",
-"de": "Hallo!",
-"fr": "Bonjour!",
-"cn": "你好!",
-"ja": "こんにちは！",
+----- LOCALE -----
+"en": "Hello!"
+"es": "¡Hola!"
+"de": "Hallo!"
+"fr": "Bonjour!"
+"cn": "你好!"
+"ja": "こんにちは！"
 "th": "สวัสดี!"
-_*_*_*_
+----- LOCALE -----
 ```
 
-The way it stores data is pretty similar to JSON, just replace `{` and `}` with `_*_*_*_` instead. In the debugging environment, the translation will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many of supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored in a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
+You must always put quote symbols (`"`) around text, and if you need to put quotation marks in it, you must use `\"` instead (e.g., `"Hello"` will become `\"Hello\"`). You also CANNOT put any line breaks between elements, or the translation will NOT work.
+
+#### Here's the WRONG example.
+Looks nice and clean, but IT WON'T WORK.
+
+```
+----- LOCALE -----
+
+"en": "Hello!"
+
+"es": "¡Hola!"
+
+"de": "Hallo!"
+
+"fr": "Bonjour!"
+
+"cn": "你好!"
+
+"ja": "こんにちは！"
+
+"th": "สวัสดี!"
+
+----- LOCALE -----
+```
+
+In debug environment, the translator will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many of supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored in a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
 
 To translate strings using this functionality, use `Tr.Dsk()` function from `translator.gd` (stored in `gd` directory of this repo):
 
@@ -573,6 +598,8 @@ Tr.Dsk(resource_object.text_hello)
 ```
 
 Unlike Godot's translation function, this translation function works differently since it involves no unique key. Which means the style of `Tr.Dsk("greeting")` will not work with this function. It's on this design since it's intended to handle large strings in resource files.
+
+**You also need to add `.txt` for `Fileters to export non-resource files/folders` in `Export Presets -> Resources` in order to get it working properly.**
 
 ---
 
