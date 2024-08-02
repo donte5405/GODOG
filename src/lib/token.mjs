@@ -163,7 +163,8 @@ export function tokenise(str, mode = "gd") {
 					}
 					if (str[i + 1] === c && str[i + 2] === c) {
 						strThreeQuotes = true;
-						setState("string", 3);
+						skipBuffer(2);
+						setState("string", 1);
 						return;
 					}
 					setState("string");
@@ -257,17 +258,34 @@ export function tokenise(str, mode = "gd") {
 					pushBuffer();
 					return true;
 				}
+				if (strThreeQuotes) {
+					if (c === "\n") {
+						buffer += "\\n";
+						skipBuffer();
+						return true;
+					}
+					if (c === "\t") {
+						buffer += "\\t";
+						skipBuffer();
+						return true;
+					}
+				}
 				if (c === stringSymbol()) {
 					if (strThreeQuotes) {
 						if (str[i + 1] === c && str[i + 2] === c) {
 							strThreeQuotes = false;
-							pushBuffer(3);
+							skipBuffer(2);
+							pushBuffer();
 							return false;
+						} else {
+							buffer += "\\" + c;
+							skipBuffer();
+							return true;
 						}
 					} else {
 						pushBuffer();
+						return false;
 					}
-					return false;
 				}
 				pushBuffer();
 				return true;
