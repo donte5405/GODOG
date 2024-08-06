@@ -284,7 +284,7 @@ GODOG provides two ways to ignore entire directory. The first one is by adding `
 #### 5. Ignoring GDScript Files
 Sometimes you want some GDScript files to be in its original location in case where you need portable serialisation (notably, game loading and saving scripts, and savable resource files). Adding `#GODOG_EXPOSE_FILE` anywhere in the file will tell GODOG to keep its location intact.
 
-However, this option WON'T ignore the file and will still scramble user labels inside it. You still need to fine tune what should be exposed manually.
+However, this option WON'T ignore the content of the file and will still scramble user labels inside it. You still need to fine tune what should be exposed manually.
 
 ```gdscript
 extends Resource
