@@ -629,8 +629,8 @@ _trCharacterIcon.texture = load(tr("PathDefaultCharacterIcon"))
 - Only works with Godot 3.x at the moment (Godot 4.x may work, but it's not tested).
 - GDScript is the only supported scripting langauge.
 - **Resource mapping with string formatting will not work!**
-- Shaders aren't tested. If it seems to break, workaround it by `#GODOG_EXPOSE` with its named parameters.
 	(Example: `"res://scn/scn_game_%d.tscn" % index`, `"Path/To/My/Node%d" % index`)
+- Shaders aren't tested. If it seems to break, workaround it by `#GODOG_EXPOSE` with its named parameters.
 - **It loves destroying GUI strings. To avoid the issue, store readable strings in translation files instead.**
 
 ---
