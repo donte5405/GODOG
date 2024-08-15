@@ -106,7 +106,7 @@ If you're using other OSes (such as Windows) and have Node.JS installed, this al
 node src/main.mjs C:\path\to\your\project C:\path\to\target\directory
 ```
 
-This will generate a new Godot project from `/path/to/your/project` into `/path/to/target/folder`. Also, there will be two files generated into `/path/to/your/project`.
+This will generate a new Godot project from `/path/to/your/project` into `/path/to/target/directory`. Also, there will be two files generated into `/path/to/your/project`.
 - `dbg.sym.json`, a file contains all debug symbols generated.
 - `godog.json`, a configuration file.
 
