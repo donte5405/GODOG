@@ -435,10 +435,10 @@ export class GDParser {
             return token;
         }
         if (mode === "path") { // For path strings.
-            return labels.get(token);
+            if (isLabel(token)) return labels.get(token);
         }
         if (mode === "tscn") { // For TSCN, TRES, other Godot related files, and files that don't need user labels randomisation.
-            return labels.get(token);
+            if (isLabel(token)) return labels.get(token);
         }
         if (mode === "gd") { // For GDScript files.
             if (isLabel(token) && tokens[i - 1] === "@") {
