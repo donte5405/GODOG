@@ -149,7 +149,9 @@ for (const translationKey of Object.keys(translations)) {
 }
 
 
-if (dirOutServerLocation && !config.ignoreCrucialPreprocessors) { // Export server version.
+// Export process.
+const hasServerExportOption = dirOutServerLocation && !config.ignoreCrucialPreprocessors;
+if (hasServerExportOption) { // Export server version.
     console.log("Building both client and server versions...");
     for (const [ destPath, excludedDirWithFile, blockIndicator ] of [
         [ dirOutLocation, "godogserver", "#GODOG_SERVER" ], // Client directory.
@@ -186,8 +188,18 @@ if (dirOutServerLocation && !config.ignoreCrucialPreprocessors) { // Export serv
 }
 
 
+// Port debug symbols.
+const debugSymbols = labels.exportDebugSymbols();
+
+
 // Export debug symbols in dev folder.
-await writeFile(join(dirLocation, "dbg.sym.json"), labels.exportDebugSymbols());
+await writeFile(join(dirLocation, "dbg.sym.json"), debugSymbols);
+
+
+// Export debug symbols in server folder if applicable.
+if (hasServerExportOption) {
+    await writeFile(join(dirOutServerLocation, "dbg.sym.json"), debugSymbols);
+}
 
 
 // Indicate when it's done.
