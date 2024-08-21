@@ -8,13 +8,13 @@ const errBracketsNotClosed = new Error("Some brackets aren't closed properly.");
 
 
 const gdComboSymbols = [
-    // Common in most languages.
-    "**=", "<<=", ">>=",
-    "<<", ">>", "==", "!=", "<=", ">=", "+=",
-    "-=", "*=", "/=", "%=", "|=", "&&", "||",
-    "^^", "++", "--",
-    // GDScript
-    "->", ":=",
+	// Common in most languages.
+	"**=", "<<=", ">>=",
+	"<<", ">>", "==", "!=", "<=", ">=", "+=",
+	"-=", "*=", "/=", "%=", "|=", "&&", "||",
+	"^^", "++", "--",
+	// GDScript
+	"->", ":=",
 ];
 
 
@@ -23,34 +23,34 @@ const gdComboSymbols = [
  * @param {string} str 
  */
 function formatGdScript(str) {
-    const strs = str.split("\n");
+	const strs = str.split("\n");
 	const strs_len = strs.length;
-    let inMultilineString = false;
-    for (let i = 0; i < strs_len; i++) {
-        if (!inMultilineString) {
-            const lines = strs[i].split("");
+	let inMultilineString = false;
+	for (let i = 0; i < strs_len; i++) {
+		if (!inMultilineString) {
+			const lines = strs[i].split("");
 			let j = 0;
-            for (; j < lines.length; j++) {
+			for (; j < lines.length; j++) {
 				if (lines[j] === "\t") continue;
-                if (lines[j] === " ") {
-                    lines[j] = "\t";
-                    continue;
-                }
-                break;
-            }
+				if (lines[j] === " ") {
+					lines[j] = "\t";
+					continue;
+				}
+				break;
+			}
 			if (lines.length && j === lines.length) {
 				strs[i] = "\r"; // Mark empty tabulated line as carriage return to remove.
 			} else {
-            	strs[i] = lines.join("");
+				strs[i] = lines.join("");
 			}
-        }
-        if (strs[i].includes(`"""`)) {
-            if (strs[i].split(`"""`).length > 2) {
-                throw errUnsupportedNestedMultiline;
-            }
-            inMultilineString = !inMultilineString;
-        }
-    }
+		}
+		if (strs[i].includes(`"""`)) {
+			if (strs[i].split(`"""`).length > 2) {
+				throw errUnsupportedNestedMultiline;
+			}
+			inMultilineString = !inMultilineString;
+		}
+	}
 	// Get rid of excessive newlines.
 	let newlineCount = 0;
 	for (let i = 0; i < strs_len; i++) {
@@ -74,7 +74,7 @@ function formatGdScript(str) {
 		// Fix newline growing at the end for some reason.
 		strs[strs_len - 1] = "";
 	}
-    return strs.join("");
+	return strs.join("");
 }
 
 

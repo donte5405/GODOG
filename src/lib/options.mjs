@@ -9,38 +9,38 @@ const errHuman = new Error("Developer's fault detected, configuration not loaded
 
 
 export class Configuration {
-    /** This is for internal use, indicates if any of crucial preprocessors are detected. */
-    crucialPreprocessorsDetected = false;
-    /** @type {string[]} List of process arguments.*/
-    processArgs = [];
-    /** @type {Record<string,string>} */
-    data = {};
+	/** This is for internal use, indicates if any of crucial preprocessors are detected. */
+	crucialPreprocessorsDetected = false;
+	/** @type {string[]} List of process arguments.*/
+	processArgs = [];
+	/** @type {Record<string,string>} */
+	data = {};
 
-    /** Project's directory path. */
-    projDirPath = "";
+	/** Project's directory path. */
+	projDirPath = "";
 
-    /**
-     * Check if specified key exists in either process arguments or the configuration file.
-     * @param {string} key 
-     */
-    check(key) {
-        return this.data[key] ? true : false;
-    }
+	/**
+	 * Check if specified key exists in either process arguments or the configuration file.
+	 * @param {string} key 
+	 */
+	check(key) {
+		return this.data[key] ? true : false;
+	}
 
-    /** If project melt enabled. */
-    get meltEnabled() { return this.check("scrambleGodotFiles"); }
-    /** If type casting should be bothered. */
-    get removeTypeCasting() { return this.check("removeTypeCasting"); }
-    /** If this project will ignore crucial preprocessors and skip source code leak risks altogether. */
-    get ignoreCrucialPreprocessors() { return this.check("ignoreCrucialPreprocessors"); }
-    /** If this project will keep all ignore blocks, useful for exporting debug builds. */
-    get keepIgnoreBlocks() { return this.check("keepIgnoreBlocks"); }
-    /** If this project will have export parameters stripped. */
-    get stripExportParams() { return this.check("noExportParams"); }
+	/** If project melt enabled. */
+	get meltEnabled() { return this.check("scrambleGodotFiles"); }
+	/** If type casting should be bothered. */
+	get removeTypeCasting() { return this.check("removeTypeCasting"); }
+	/** If this project will ignore crucial preprocessors and skip source code leak risks altogether. */
+	get ignoreCrucialPreprocessors() { return this.check("ignoreCrucialPreprocessors"); }
+	/** If this project will keep all ignore blocks, useful for exporting debug builds. */
+	get keepIgnoreBlocks() { return this.check("keepIgnoreBlocks"); }
+	/** If this project will have export parameters stripped. */
+	get stripExportParams() { return this.check("noExportParams"); }
 
-    constructor(o) {
-        if (o) this.data = o;
-    }
+	constructor(o) {
+		if (o) this.data = o;
+	}
 }
 
 
@@ -53,19 +53,19 @@ let config;
  * @param {string} projectPath 
  */
 export async function loadConfig(projectPath) {
-    const configPath = join(projectPath, "/godog.json");
-    if (!existsSync(configPath)) {
-        await writeFile(configPath, "{}");
-    }
-    config = new Configuration(JSON.parse(await readFile(configPath, {encoding: "utf-8"})));
-    return config;
+	const configPath = join(projectPath, "/godog.json");
+	if (!existsSync(configPath)) {
+		await writeFile(configPath, "{}");
+	}
+	config = new Configuration(JSON.parse(await readFile(configPath, {encoding: "utf-8"})));
+	return config;
 }
 
 
 /** Get currently active config. */
 export function getConfig() {
-    if (!config) {
-        throw errHuman;
-    }
-    return config;
+	if (!config) {
+		throw errHuman;
+	}
+	return config;
 }

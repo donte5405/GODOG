@@ -27,26 +27,26 @@ const mapsToMelt = [];
  * @param {string} folder 
  */
 function cleanEmptyFoldersRecursively(folder) {
-    var isDir = statSync(folder).isDirectory();
-    if (!isDir) {
-        return;
-    }
-    var files = readdirSync(folder);
-    if (files.length > 0) {
-        files.forEach(function (file) {
-            var fullPath = join(folder, file);
-            cleanEmptyFoldersRecursively(fullPath);
-        });
+	var isDir = statSync(folder).isDirectory();
+	if (!isDir) {
+		return;
+	}
+	var files = readdirSync(folder);
+	if (files.length > 0) {
+		files.forEach(function (file) {
+			var fullPath = join(folder, file);
+			cleanEmptyFoldersRecursively(fullPath);
+		});
 
-        // re-evaluate files; after deleting subfolder
-        // we may have parent folder empty now
-        files = readdirSync(folder);
-    }
+		// re-evaluate files; after deleting subfolder
+		// we may have parent folder empty now
+		files = readdirSync(folder);
+	}
 
-    if (files.length === 0) {
-        rmdirSync(folder);
-        return;
-    }
+	if (files.length === 0) {
+		rmdirSync(folder);
+		return;
+	}
 }
 
 
@@ -133,16 +133,16 @@ export function dontMeltPath(path) {
  * @param {Labels} labels
  */
 export async function meltDirectory(rootPath, labels) {
-    const filePaths = fileList(rootPath);
+	const filePaths = fileList(rootPath);
 	Remap.rootPath = rootPath;
 	Remap.labels = labels;
 	// Search for project root.
 	for (const path of filePaths) {
-        if (hasFile(PROJECT_FILE_NAME, path)) {
-            rootPath = path.split(PROJECT_FILE_NAME)[0];
-            break;
-        }
-    }
+		if (hasFile(PROJECT_FILE_NAME, path)) {
+			rootPath = path.split(PROJECT_FILE_NAME)[0];
+			break;
+		}
+	}
 	// Search for GDResource files.
 	for (const filePath of filePaths) {
 		const map = remap(rootPath, filePath);
@@ -153,10 +153,10 @@ export async function meltDirectory(rootPath, labels) {
 		}
 		if (checkFileExtension(oldPath, [ "cfg", "godot", "csv" ]) || hasFile("default_env.tres", oldPath)) {
 			insertMap(map, mapsToChange);
-        }
-        if (!checkFileExtension(oldPath, [ "tscn", "tres", "gd" ])) {
-            continue;
-        }
+		}
+		if (!checkFileExtension(oldPath, [ "tscn", "tres", "gd" ])) {
+			continue;
+		}
 		insertMap(map, mapsToChange);
 		insertMap(map.melt(), mapsToMelt);
 	}
@@ -167,20 +167,20 @@ export async function meltDirectory(rootPath, labels) {
 	// Alternate paths.
 	for (const map of mapsToChange) {
 		const filePath = map.filePath;
-        let str = await readFile(filePath, { encoding: "utf-8" });
-        for (const meltedMap of mapsToMelt) {
+		let str = await readFile(filePath, { encoding: "utf-8" });
+		for (const meltedMap of mapsToMelt) {
 			const oldGodotPath = meltedMap.oldGodotPath;
 			const newGodotPath = meltedMap.newGodotPath;
-            str = str
-                .split(`'${oldGodotPath}'`).join(`'${newGodotPath}'`)
-                .split(`"${oldGodotPath}"`).join(`"${newGodotPath}"`)
-                .split(`'*${oldGodotPath}'`).join(`'*${newGodotPath}'`)
-                .split(`"*${oldGodotPath}"`).join(`"*${newGodotPath}"`)
-                .split(`\\"${oldGodotPath}\\"`).join(`\\"${newGodotPath}\\"`)
-                .split(`\\"*${oldGodotPath}\\"`).join(`\\"*${newGodotPath}\\"`);
+			str = str
+				.split(`'${oldGodotPath}'`).join(`'${newGodotPath}'`)
+				.split(`"${oldGodotPath}"`).join(`"${newGodotPath}"`)
+				.split(`'*${oldGodotPath}'`).join(`'*${newGodotPath}'`)
+				.split(`"*${oldGodotPath}"`).join(`"*${newGodotPath}"`)
+				.split(`\\"${oldGodotPath}\\"`).join(`\\"${newGodotPath}\\"`)
+				.split(`\\"*${oldGodotPath}\\"`).join(`\\"*${newGodotPath}\\"`);
 		}
 		await writeFile(filePath, str);
-    }
+	}
 	// Clear empty directories.
-    cleanEmptyFoldersRecursively(rootPath);
+	cleanEmptyFoldersRecursively(rootPath);
 }

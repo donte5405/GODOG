@@ -9,7 +9,7 @@ const sourcePath = process.argv[2];
 
 
 if (!sourcePath) {
-    throw errNoProjSource;
+	throw errNoProjSource;
 }
 
 

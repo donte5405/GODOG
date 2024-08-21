@@ -16,9 +16,9 @@ export const translations = {};
 
 /** Flush all translation keys. */
 export function flushTranslations() {
-    for (const key of Object.keys(translations)) {
-        delete translations[key];
-    }
+	for (const key of Object.keys(translations)) {
+		delete translations[key];
+	}
 }
 
 
@@ -27,7 +27,7 @@ export function flushTranslations() {
  * @param {string} str 
  */
 export function hasTranslations(str) {
-    return str.includes(trQuote);
+	return str.includes(trQuote);
 }
 
 
@@ -36,15 +36,15 @@ export function hasTranslations(str) {
  * @param {string} str 
  */
 export function parseTranslations(str) {
-    const lines = str.split(trQuote);
-    if (lines.length !== 3)
-        throw errIncompleteTrQuote(str);
-    const trKey = lines[1].substring(1, lines[1].length - 1).split("\n").join(",");
-    /** @type {Record<string,string>} */
-    const json = JSON.parse(`{${trKey}}`);
-    const strid = randomUUID().split("-").join("");
-    for (const lang of Object.keys(json)) {
-        translations[md5(lang + "_" + strid)] = json[lang];
-    }
-    return strid;
+	const lines = str.split(trQuote);
+	if (lines.length !== 3)
+		throw errIncompleteTrQuote(str);
+	const trKey = lines[1].substring(1, lines[1].length - 1).split("\n").join(",");
+	/** @type {Record<string,string>} */
+	const json = JSON.parse(`{${trKey}}`);
+	const strid = randomUUID().split("-").join("");
+	for (const lang of Object.keys(json)) {
+		translations[md5(lang + "_" + strid)] = json[lang];
+	}
+	return strid;
 }
