@@ -589,7 +589,7 @@ Looks nice and clean, but IT WON'T WORK.
 ----- LOCALE -----
 ```
 
-In debug environment, the translator will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many of supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored in a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
+In debug environment, the translator will automatically convert this sequence into translation maps, and automatically pick the one that matches user's locale. This process is kinda slow if you have many supported languages, but it shouldn't be an issue in debug environment. In the export environment, GODOG pre-compiles all lists of strings in project files into pre-computed hash maps stored in a PCK file. The translation function will instead load the string according to user's locale immediately without any additional conversions.
 
 To translate strings using this functionality, use `Tr.Dsk()` function from `translator.gd` (stored in `gd` directory of this repo):
 
