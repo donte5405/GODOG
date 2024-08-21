@@ -383,7 +383,7 @@ Normally, GODOG will not interact with file paths especially if the path also co
 
 ```gdscript
 "https://sea.men/api/v3/load_player/%s" % player_name # GODOG will keep the URL intact.
-"https://sea.men/api/v3/" + "load_player" + "/" % player_name # GODOG will mess up the "load_player" label, unless it's ignored.
+"https://sea.men/api/v3/" + "load_player" + "/" + player_name # GODOG will mess up the "load_player" label, unless it's ignored.
 
 str("https://sea.men/api/v3/load_player/", player_name) # GODOG is happy with this.
 str("https://sea.men/api/v3/", "load_player", "/", player_name) # Depending on how you want to achieve it, but this generally doesn't work out right.
