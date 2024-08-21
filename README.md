@@ -599,7 +599,7 @@ Tr.Dsk(resource_object.text_hello)
 
 Unlike Godot's translation function, this translation function works differently since it involves no unique key. Which means the style of `Tr.Dsk("greeting")` will not work with this function. It's on this design since it's intended to handle large strings in resource files.
 
-**You also need to add `.txt` for `Fileters to export non-resource files/folders` in `Export Presets -> Resources` in order to get it working properly.**
+**You also need to add `.txt` for `Filters to export non-resource files/folders` in `Export Presets -> Resources` in order to get it working properly.**
 
 ---
 
