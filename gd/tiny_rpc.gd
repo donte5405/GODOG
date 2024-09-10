@@ -24,7 +24,7 @@ var _dummyPeerStorage := {}
 export var UseJson := true
 export var ServerPort := 12345
 export var ServerAddress := ""
-export var ServerDebugAddress := "http://localhost" # This is not used by TinyRPC, but it's there for ease of debugging.
+export var ServerDebugAddress := "" # This is not used by TinyRPC, but it's there for ease of debugging.
 #GODOG_CLIENT
 export var ConnectToHostInDebug := false
 #GODOG_CLIENT
@@ -273,6 +273,18 @@ func GetPeerStorage(_peer: WebSocketPeer) -> Dictionary:
 	return _peer.get_meta("PEER_STORAGE")
 
 
+func PassCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+	_DispatchFuncCall(_peer, true, _funcArgs)
+
+
+func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+	if _peer:
+		_Rpc(_peer, _funcArgs)
+	else:
+		_DispatchFuncCall(null, false, _funcArgs)
+#GODOG_SERVER
+
+
 func GetServerUrl() -> String:
 	#GODOG_IGNORE
 	if OS.get_name() == "Server":
@@ -290,18 +302,6 @@ func GetServerUrl() -> String:
 	else:
 		return ServerDebugAddress
 	#GODOG_IGNORE
-
-
-func PassCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
-	_DispatchFuncCall(_peer, true, _funcArgs)
-
-
-func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
-	if _peer:
-		_Rpc(_peer, _funcArgs)
-	else:
-		_DispatchFuncCall(null, false, _funcArgs)
-#GODOG_SERVER
 
 
 func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String = "") -> void:
