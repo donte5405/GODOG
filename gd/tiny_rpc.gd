@@ -24,7 +24,7 @@ var _dummyPeerStorage := {}
 export var UseJson := true
 export var ServerPort := 12345
 export var ServerAddress := ""
-export var ServerDebugAddress := "" # This is not used by TinyRPC, but it's there for ease of debugging.
+export var ServerDebugAddress := "" # For ease of debugging.
 #GODOG_CLIENT
 export var ConnectToHostInDebug := false
 #GODOG_CLIENT
@@ -287,21 +287,11 @@ func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
 
 func GetServerUrl() -> String:
 	#GODOG_IGNORE
-	if OS.get_name() == "Server":
-	#GODOG_IGNORE
-	#GODOG_SERVER
-		return ServerAddress
-	#GODOG_SERVER
-	#GODOG_IGNORE
-	if not OS.is_debug_build() or ConnectToHostInDebug:
-	#GODOG_IGNORE
-	#GODOG_CLIENT
-		return ServerAddress
-	#GODOG_CLIENT
-	#GODOG_IGNORE
-	else:
+	if OS.is_debug_build():
 		return ServerDebugAddress
+	else:
 	#GODOG_IGNORE
+		return ServerAddress
 
 
 func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String = "") -> void:
