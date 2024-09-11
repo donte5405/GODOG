@@ -115,7 +115,7 @@ class TrpcClient extends Node:
 
 
 	func GetFullAddress() -> String:
-		return str(_Trpc.ServerAddress, ":", _Trpc.ServerPort)
+		return str(_Trpc.GetServerUrl(), ":", _Trpc.ServerPort)
 
 
 	func ConnectToHost() -> void:
