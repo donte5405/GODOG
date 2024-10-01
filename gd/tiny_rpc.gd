@@ -52,24 +52,27 @@ class TrpcServer extends Node:
 
 	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
 		CountConnections(1)
-		_Trpc.emit_signal("PeerConnected", _peerId)
+		var _peer := _wsServer.get_peer(_peerId)
+		_Trpc.emit_signal("PeerConnected", _peer)
 		#GODOG_IGNORE
-		print("OPEN ip: %s, id =  %d, proto = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _protocol])
+		print("OPEN ip: %s, id =  %d, proto = %s" % [_peer.get_connected_host(), _peerId, _protocol])
 		#GODOG_IGNORE
 
 
 	func _PeerCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
 		#GODOG_IGNORE
-		print("CLOSE REQ ip: %s, id =  %d, code = %d, reason = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
+		var _peer := _wsServer.get_peer(_peerId)
+		print("CLOSE REQ ip: %s, id =  %d, code = %d, reason = %s" % [_peer.get_connected_host(), _peerId, _statusCode, _disconnectReason])
 		#GODOG_IGNORE
 		pass
 	
 
 	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
 		CountConnections(-1)
-		_Trpc.emit_signal("PeerDisconnected", _peerId)
+		var _peer := _wsServer.get_peer(_peerId)
+		_Trpc.emit_signal("PeerDisconnected", _peer)
 		#GODOG_IGNORE
-		print("CLOSE IP: %s, id =  %d, clean = %s" % [_wsServer.get_peer(_peerId).get_connected_host(), _peerId, str(_wasClean)])
+		print("CLOSE IP: %s, id =  %d, clean = %s" % [_peer.get_connected_host(), _peerId, str(_wasClean)])
 		#GODOG_IGNORE
 
 
