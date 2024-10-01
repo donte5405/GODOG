@@ -18,7 +18,7 @@ var _FuncMap := {}
 var _ClientPeer: WebSocketPeer
 #GODOG_CLIENT
 #GODOG_SERVER
-var _dummyPeerStorage := {}
+var _DummyPeerStorage := {}
 #GODOG_SERVER
 
 export var UseJson := true
@@ -38,21 +38,21 @@ export(String, FILE, "*.key") var SslPrivateKeyPath := ""
 
 #GODOG_SERVER
 class TrpcServer extends Node:
-	#GODOG_PRIVATE: _currentConnections, _wsServer, _Trpc
-	var _currentConnections := 0
-	var _wsServer := WebSocketServer.new()
+	#GODOG_PRIVATE: _CurrentConnections, _WsServer, _Trpc
+	var _CurrentConnections := 0
+	var _WsServer := WebSocketServer.new()
 
 	onready var _Trpc := get_parent()
 
 
 	func CountConnections(_newConnections: int) -> void:
-		_currentConnections += _newConnections
-		_wsServer.refuse_new_connections = _currentConnections >= _Trpc.MaxConnections
+		_CurrentConnections += _newConnections
+		_WsServer.refuse_new_connections = _CurrentConnections >= _Trpc.MaxConnections
 
 
 	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
 		CountConnections(1)
-		var _peer := _wsServer.get_peer(_peerId)
+		var _peer := _WsServer.get_peer(_peerId)
 		_Trpc.emit_signal("PeerConnected", _peer)
 		#GODOG_IGNORE
 		print("OPEN ip: %s, id =  %d, proto = %s" % [_peer.get_connected_host(), _peerId, _protocol])
@@ -61,7 +61,7 @@ class TrpcServer extends Node:
 
 	func _PeerCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
 		#GODOG_IGNORE
-		var _peer := _wsServer.get_peer(_peerId)
+		var _peer := _WsServer.get_peer(_peerId)
 		print("CLOSE REQ ip: %s, id =  %d, code = %d, reason = %s" % [_peer.get_connected_host(), _peerId, _statusCode, _disconnectReason])
 		#GODOG_IGNORE
 		pass
@@ -69,7 +69,7 @@ class TrpcServer extends Node:
 
 	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
 		CountConnections(-1)
-		var _peer := _wsServer.get_peer(_peerId)
+		var _peer := _WsServer.get_peer(_peerId)
 		_Trpc.emit_signal("PeerDisconnected", _peer)
 		#GODOG_IGNORE
 		print("CLOSE IP: %s, id =  %d, clean = %s" % [_peer.get_connected_host(), _peerId, str(_wasClean)])
@@ -77,11 +77,11 @@ class TrpcServer extends Node:
 
 
 	func _DataReceived(_peerId: int) -> void:
-		_Trpc._ParsePeerPacket(_wsServer.get_peer(_peerId), true)
+		_Trpc._ParsePeerPacket(_WsServer.get_peer(_peerId), true)
 
 
 	func _DataReceivedJson(_peerId: int) -> void:
-		_Trpc._ParsePeerPacketJson(_wsServer.get_peer(_peerId), true)
+		_Trpc._ParsePeerPacketJson(_WsServer.get_peer(_peerId), true)
 
 
 	func _ready() -> void:
@@ -90,13 +90,13 @@ class TrpcServer extends Node:
 			var _privateKey := CryptoKey.new()
 			_publicKey.load(_Trpc.SslPublicKeyPath)
 			_privateKey.load(_Trpc.SslPrivateKeyPath)
-			_wsServer.ssl_certificate = _publicKey
-			_wsServer.private_key = _privateKey
-		_wsServer.connect("client_connected", self, "_PeerConnected")
-		_wsServer.connect("client_disconnected", self, "_PeerDisconnected")
-		_wsServer.connect("client_close_request", self, "_PeerCloseRequest")
-		_wsServer.connect("data_received", self, "_DataReceivedJson" if _Trpc.UseJson else "_DataReceived")
-		if _wsServer.listen(_Trpc.ServerPort) != OK:
+			_WsServer.ssl_certificate = _publicKey
+			_WsServer.private_key = _privateKey
+		_WsServer.connect("client_connected", self, "_PeerConnected")
+		_WsServer.connect("client_disconnected", self, "_PeerDisconnected")
+		_WsServer.connect("client_close_request", self, "_PeerCloseRequest")
+		_WsServer.connect("data_received", self, "_DataReceivedJson" if _Trpc.UseJson else "_DataReceived")
+		if _WsServer.listen(_Trpc.ServerPort) != OK:
 			#GODOG_IGNORE
 			printerr("Unable to start a server at port %d." % _Trpc.ServerPort)
 			#GODOG_IGNORE
@@ -104,15 +104,15 @@ class TrpcServer extends Node:
 
 
 	func _process(_delta: float) -> void:
-		_wsServer.poll()
+		_WsServer.poll()
 #GODOG_SERVER
 
 
 #GODOG_CLIENT
 class TrpcClient extends Node:
-	#GODOG_PRIVATE: _serverClosed, _wsClient
-	var _serverClosed := false
-	var _wsClient := WebSocketClient.new()
+	#GODOG_PRIVATE: _ServerClosed, _WsClient
+	var _ServerClosed := false
+	var _WsClient := WebSocketClient.new()
 
 	onready var _Trpc := get_parent()
 
@@ -122,7 +122,7 @@ class TrpcClient extends Node:
 
 
 	func ConnectToHost() -> void:
-		if _wsClient.connect_to_url(GetFullAddress()) != OK:
+		if _WsClient.connect_to_url(GetFullAddress()) != OK:
 			#GODOG_IGNORE
 			printerr("Failed to issue the connection to the address %s, retrying..." % GetFullAddress())
 			#GODOG_IGNORE
@@ -132,7 +132,7 @@ class TrpcClient extends Node:
 
 	func _ConnectionClosed(_wasClean: bool = false) -> void:
 		_Trpc.emit_signal("ClientDisconnected")
-		if not _serverClosed:
+		if not _ServerClosed:
 			call_deferred("ConnectToHost")
 			#GODOG_IGNORE
 			printerr("Connection closed, reconnecting...")
@@ -140,7 +140,7 @@ class TrpcClient extends Node:
 
 
 	func _ConnectionEstablished(_proto: String = "") -> void:
-		_Trpc._ClientPeer = _wsClient.get_peer(1)
+		_Trpc._ClientPeer = _WsClient.get_peer(1)
 		_Trpc.emit_signal("ClientConnected")
 		#GODOG_IGNORE
 		print("Connected to host %s." % GetFullAddress())
@@ -148,29 +148,29 @@ class TrpcClient extends Node:
 
 
 	func _DataReceived() -> void:
-		_Trpc._ParsePeerPacket(_wsClient.get_peer(1), false)
+		_Trpc._ParsePeerPacket(_WsClient.get_peer(1), false)
 	
 
 	func _DataReceivedJson() -> void:
-		_Trpc._ParsePeerPacketJson(_wsClient.get_peer(1), false)
+		_Trpc._ParsePeerPacketJson(_WsClient.get_peer(1), false)
 
 
 	func _ServerCloseRequest(_code: int, _reason: String) -> void:
-		_serverClosed = true
+		_ServerClosed = true
 		_Trpc.emit_signal("ServerCloseRequest", _code, _reason)
 
 
 	func _ready() -> void:
-		_wsClient.connect("connection_error", self, "_ConnectionClosed")
-		_wsClient.connect("connection_closed", self, "_ConnectionClosed")
-		_wsClient.connect("connection_established", self, "_ConnectionEstablished")
-		_wsClient.connect("server_close_request", self, "_ServerCloseRequest")
-		_wsClient.connect("data_received", self, "_DataReceivedJson" if _Trpc.UseJson else "_DataReceived")
+		_WsClient.connect("connection_error", self, "_ConnectionClosed")
+		_WsClient.connect("connection_closed", self, "_ConnectionClosed")
+		_WsClient.connect("connection_established", self, "_ConnectionEstablished")
+		_WsClient.connect("server_close_request", self, "_ServerCloseRequest")
+		_WsClient.connect("data_received", self, "_DataReceivedJson" if _Trpc.UseJson else "_DataReceived")
 		call_deferred("ConnectToHost")
 
 
 	func _process(_delta: float) -> void:
-		_wsClient.poll()
+		_WsClient.poll()
 #GODOG_CLIENT
 
 
@@ -269,7 +269,7 @@ func GetPeerAddress(_peer: WebSocketPeer) -> String:
 
 func GetPeerStorage(_peer: WebSocketPeer) -> Dictionary:
 	#GODOG_IGNORE
-	return _dummyPeerStorage
+	return _DummyPeerStorage
 	#GODOG_IGNORE
 	if not _peer.has_meta("PEER_STORAGE"):
 		_peer.set_meta("PEER_STORAGE", {})
