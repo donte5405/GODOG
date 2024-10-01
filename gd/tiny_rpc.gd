@@ -12,14 +12,15 @@ signal ServerCloseRequest(_closeCode, _closeReason)
 #GODOG_CLIENT
 
 
-#GODOG_PRIVATE: _FuncMap, _ClientPeer
+#GODOG_PRIVATE: _FuncMap
 var _FuncMap := {}
-#GODOG_CLIENT
-var _ClientPeer: WebSocketPeer
-#GODOG_CLIENT
+var _WsMpPeer: WebSocketMultiplayerPeer
 #GODOG_SERVER
+var _PeerStorage := {}
+#GODOG_SERVER
+#GODOG_IGNORE
 var _DummyPeerStorage := {}
-#GODOG_SERVER
+#GODOG_IGNORE
 
 export var UseJson := true
 export var ServerPort := 12345
@@ -52,36 +53,35 @@ class TrpcServer extends Node:
 
 	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
 		CountConnections(1)
-		var _peer := _WsServer.get_peer(_peerId)
-		_Trpc.emit_signal("PeerConnected", _peer)
+		_Trpc._PeerStorage[_peerId] = {}
+		_Trpc.emit_signal("PeerConnected", _peerId)
 		#GODOG_IGNORE
-		print("OPEN ip: %s, id =  %d, proto = %s" % [_peer.get_connected_host(), _peerId, _protocol])
+		print("OPEN IP: %s, id =  %d, proto = %s" % [_WsServer.get_peer(_peerId).get_connected_host(), _peerId, _protocol])
 		#GODOG_IGNORE
 
 
 	func _PeerCloseRequest(_peerId: int, _statusCode: int, _disconnectReason: String) -> void:
 		#GODOG_IGNORE
-		var _peer := _WsServer.get_peer(_peerId)
-		print("CLOSE REQ ip: %s, id =  %d, code = %d, reason = %s" % [_peer.get_connected_host(), _peerId, _statusCode, _disconnectReason])
+		print("CLOSE REQ IP: %s, id =  %d, code = %d, reason = %s" % [_WsServer.get_peer(_peerId).get_connected_host(), _peerId, _statusCode, _disconnectReason])
 		#GODOG_IGNORE
 		pass
 	
 
 	func _PeerDisconnected(_peerId: int, _wasClean: bool = false) -> void:
 		CountConnections(-1)
-		var _peer := _WsServer.get_peer(_peerId)
-		_Trpc.emit_signal("PeerDisconnected", _peer)
+		_Trpc.emit_signal("PeerDisconnected", _peerId)
+		_Trpc._PeerStorage.erase(_peerId)
 		#GODOG_IGNORE
-		print("CLOSE IP: %s, id =  %d, clean = %s" % [_peer.get_connected_host(), _peerId, str(_wasClean)])
+		print("CLOSE IP: %s, id =  %d, clean = %s" % [_WsServer.get_peer(_peerId).get_connected_host(), _peerId, str(_wasClean)])
 		#GODOG_IGNORE
 
 
 	func _DataReceived(_peerId: int) -> void:
-		_Trpc._ParsePeerPacket(_WsServer.get_peer(_peerId), true)
+		_Trpc._ParsePeerPacket(_peerId, true)
 
 
 	func _DataReceivedJson(_peerId: int) -> void:
-		_Trpc._ParsePeerPacketJson(_WsServer.get_peer(_peerId), true)
+		_Trpc._ParsePeerPacketJson(_peerId, true)
 
 
 	func _ready() -> void:
@@ -101,6 +101,7 @@ class TrpcServer extends Node:
 			printerr("Unable to start a server at port %d." % _Trpc.ServerPort)
 			#GODOG_IGNORE
 			return
+		_Trpc._WsMpPeer = _WsServer
 
 
 	func _process(_delta: float) -> void:
@@ -126,7 +127,7 @@ class TrpcClient extends Node:
 			#GODOG_IGNORE
 			printerr("Failed to issue the connection to the address %s, retrying..." % GetFullAddress())
 			#GODOG_IGNORE
-			_Trpc._ClientPeer = null
+			_Trpc._WsMpPeer = null
 			call_deferred("ConnectToHost")
 
 
@@ -140,7 +141,7 @@ class TrpcClient extends Node:
 
 
 	func _ConnectionEstablished(_proto: String = "") -> void:
-		_Trpc._ClientPeer = _WsClient.get_peer(1)
+		_Trpc._WsMpPeer = _WsClient
 		_Trpc.emit_signal("ClientConnected")
 		#GODOG_IGNORE
 		print("Connected to host %s." % GetFullAddress())
@@ -148,11 +149,11 @@ class TrpcClient extends Node:
 
 
 	func _DataReceived() -> void:
-		_Trpc._ParsePeerPacket(_WsClient.get_peer(1), false)
+		_Trpc._ParsePeerPacket(1, false)
 	
 
 	func _DataReceivedJson() -> void:
-		_Trpc._ParsePeerPacketJson(_WsClient.get_peer(1), false)
+		_Trpc._ParsePeerPacketJson(1, false)
 
 
 	func _ServerCloseRequest(_code: int, _reason: String) -> void:
@@ -174,11 +175,11 @@ class TrpcClient extends Node:
 #GODOG_CLIENT
 
 
-func _ParsePeerPacket(_peer: WebSocketPeer, _isServer: bool) -> void:
-	var _str := _peer.get_packet().get_string_from_utf8()
+func _ParsePeerPacket(_peerId: int, _isServer: bool) -> void:
+	var _str := _WsMpPeer.get_peer(_peerId).get_packet().get_string_from_utf8()
 	if _str.empty():
 		#GODOG_IGNORE
-		printerr("%s Sent an empty packet." % _peer.get_connected_host())
+		printerr("%s Sent an empty packet." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
 	for _sName in [ "CSharpScript", "GDScript", "VisualScript" ]: # This is just a bandage solution, I don't trust this.
@@ -187,26 +188,26 @@ func _ParsePeerPacket(_peer: WebSocketPeer, _isServer: bool) -> void:
 	var _obj = str2var(_str)
 	if typeof(_obj) != TYPE_ARRAY:
 		#GODOG_IGNORE
-		printerr("%s Sent an invalid data type packet, not an array." % _peer.get_connected_host())
+		printerr("%s Sent an invalid data type packet, not an array." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
-	_DispatchFuncCall(_peer, _isServer, _obj)
+	_DispatchFuncCall(_peerId, _isServer, _obj)
 
 
-func _ParsePeerPacketJson(_peer: WebSocketPeer, _isServer: bool) -> void:
-	var _str := _peer.get_packet().get_string_from_utf8()
+func _ParsePeerPacketJson(_peerId: int, _isServer: bool) -> void:
+	var _str := _WsMpPeer.get_peer(_peerId).get_packet().get_string_from_utf8()
 	if _str.empty():
 		#GODOG_IGNORE
-		printerr("%s Sent an empty packet." % _peer.get_connected_host())
+		printerr("%s Sent an empty packet." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
 	var _obj = JSON.parse(_str).result
 	if typeof(_obj) != TYPE_ARRAY:
 		#GODOG_IGNORE
-		printerr("%s Sent an invalid JSON data type packet, not an array." % _peer.get_connected_host())
+		printerr("%s Sent an invalid JSON data type packet, not an array." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
-	_DispatchFuncCall(_peer, _isServer, _obj)
+	_DispatchFuncCall(_peerId, _isServer, _obj)
 
 
 func _IsValidFuncCall(_funcArgs: Array) -> bool:
@@ -217,7 +218,7 @@ func _IsValidFuncCall(_funcArgs: Array) -> bool:
 	return true
 
 
-func _DispatchFuncCall(_peer: WebSocketPeer, _isServer: bool, _funcArgs: Array) -> void:
+func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_IGNORE
 		printerr("Invalid RPC: %s" % var2str(_funcArgs))
@@ -233,58 +234,58 @@ func _DispatchFuncCall(_peer: WebSocketPeer, _isServer: bool, _funcArgs: Array) 
 	if not _func.is_valid():
 		return
 	if _isServer:
-		_func.call_funcv([ _peer ] + _funcArgs)
+		_func.call_funcv([ _peerId ] + _funcArgs)
 	else:
 		_func.call_funcv(_funcArgs)
 
 
-func _Rpc(_peer: WebSocketPeer, _funcArgs: Array) -> void:
+func _Rpc(_peerId: int, _funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_IGNORE
 		printerr("Invalid RPC: %s" % var2str(_funcArgs))
 		#GODOG_IGNORE
 		return
 	if UseJson:
-		_peer.put_packet(JSON.print(_funcArgs).to_utf8())
+		_WsMpPeer.get_peer(_peerId).put_packet(JSON.print(_funcArgs).to_utf8())
 	else:
-		_peer.put_packet(var2str(_funcArgs).to_utf8())
+		_WsMpPeer.get_peer(_peerId).put_packet(var2str(_funcArgs).to_utf8())
 
 
 #GODOG_CLIENT
 func Request(_funcArgs: Array) -> void:
-	if _ClientPeer:
-		_Rpc(_ClientPeer, _funcArgs)
+	if _WsMpPeer:
+		_Rpc(1, _funcArgs)
 	else:
-		_DispatchFuncCall(null, true, _funcArgs)
+		_DispatchFuncCall(0, true, _funcArgs)
 #GODOG_CLIENT
 
 
 #GODOG_SERVER
-func GetPeerAddress(_peer: WebSocketPeer) -> String:
+func GetPeerAddress(_peerId: int) -> String:
 	#GODOG_IGNORE
 	return "localhost"
 	#GODOG_IGNORE
-	return _peer.get_connected_host()
+	return _WsMpPeer.get_peer(_peerId).get_connected_host()
 
 
-func GetPeerStorage(_peer: WebSocketPeer) -> Dictionary:
+func GetPeerStorage(_peerId: int) -> Dictionary:
 	#GODOG_IGNORE
 	return _DummyPeerStorage
 	#GODOG_IGNORE
-	if not _peer.has_meta("PEER_STORAGE"):
-		_peer.set_meta("PEER_STORAGE", {})
-	return _peer.get_meta("PEER_STORAGE")
+	if not _PeerStorage.has(_peerId):
+		_PeerStorage[_peerId] = {}
+	return _PeerStorage[_peerId]
 
 
-func PassCall(_peer: WebSocketPeer, _funcArgs: Array) -> void:
-	_DispatchFuncCall(_peer, true, _funcArgs)
+func PassCall(_peerId: int, _funcArgs: Array) -> void:
+	_DispatchFuncCall(_peerId, true, _funcArgs)
 
 
-func Response(_peer: WebSocketPeer, _funcArgs: Array) -> void:
-	if _peer:
-		_Rpc(_peer, _funcArgs)
+func Response(_peerId: int, _funcArgs: Array) -> void:
+	if _WsMpPeer:
+		_Rpc(_peerId, _funcArgs)
 	else:
-		_DispatchFuncCall(null, false, _funcArgs)
+		_DispatchFuncCall(0, false, _funcArgs)
 #GODOG_SERVER
 
 
