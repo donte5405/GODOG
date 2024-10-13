@@ -13,7 +13,7 @@ import { parseLocaleCsv } from "./lib/locale.csv.mjs";
 import { stripGdBlockFromFile } from "./lib/preprocessor.mjs";
 import { filesCopySelectively } from "./lib/file.copy.mjs";
 import { randomUUID } from "crypto";
-import { meltDirectory } from "./lib/melt.mjs";
+import { getFileRemaps, meltDirectory } from "./lib/melt.mjs";
 
 
 const errNoProjLocation = new Error("Project location must be specified");
@@ -192,13 +192,24 @@ if (hasServerExportOption) { // Export server version.
 const debugSymbols = labels.exportDebugSymbols();
 
 
+// Insert all file paths from melt module to debug symbols.
+const remapFiles = getFileRemaps();
+for (const key in remapFiles) {
+	debugSymbols[key] = remapFiles[key];
+}
+
+
+// Convert symbols to string.
+const debugSymbolsStr = JSON.stringify(debugSymbols);
+
+
 // Export debug symbols in dev folder.
-await writeFile(join(dirLocation, "dbg.sym.json"), debugSymbols);
+await writeFile(join(dirLocation, "dbg.sym.json"), debugSymbolsStr);
 
 
 // Export debug symbols in server folder if applicable.
 if (hasServerExportOption) {
-	await writeFile(join(dirOutServerLocation, "dbg.sym.json"), debugSymbols);
+	await writeFile(join(dirOutServerLocation, "dbg.sym.json"), debugSymbolsStr);
 }
 
 

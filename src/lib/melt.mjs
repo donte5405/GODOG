@@ -184,3 +184,14 @@ export async function meltDirectory(rootPath, labels) {
 	// Clear empty directories.
 	cleanEmptyFoldersRecursively(rootPath);
 }
+
+
+export function getFileRemaps() {
+	/** @type {Record<string, string>} */
+	const map = {};
+	for (const remap of mapsToMelt) {
+		map[remap.oldGodotPath] = remap.newGodotPath;
+		map[remap.newGodotPath] = remap.oldGodotPath;
+	}
+	return map;
+}

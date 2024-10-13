@@ -187,7 +187,7 @@ export class Labels {
 			delete listMap[pair];
 			delete listMap[key];
 		}
-		return JSON.stringify(this.listMap);
+		return this.listMap;
 	}
 
 	/**
