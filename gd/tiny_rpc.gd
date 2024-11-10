@@ -311,7 +311,7 @@ func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String = "") ->
 
 func _ready() -> void:
 	#GODOG_IGNORE
-	if OS.get_name() == "Server":
+	if OS.has_feature("Server"):
 	#GODOG_IGNORE
 	#GODOG_SERVER
 		add_child(TrpcServer.new())
