@@ -194,7 +194,7 @@ export function tokenise(str, mode = "gd") {
 		}
 	};
 
-	const setState = (state = "", pushBufferCount = 0, storage = {}) => {
+	const setState = (state = "", pushBufferCount = 0, storage = { delimiter: "" }) => {
 		pushBuffer(pushBufferCount);
 		while (runState(state, storage)) {
 			if (i < str.length) continue;
@@ -202,7 +202,7 @@ export function tokenise(str, mode = "gd") {
 		}
 	};
 
-	const runState = (state = "", storage = {}) => {
+	const runState = (state = "", storage = { delimiter: "" }) => {
 		const c = str[i];
 		switch (state) {
 			default:
@@ -290,7 +290,6 @@ export function tokenise(str, mode = "gd") {
 				pushBuffer();
 				return true;
 			case "clang_raw_str":
-				/** @type {string} */
 				const delimiter = storage.delimiter;
 				if (str.slice(i, i + delimiter.length) === delimiter) {
 					pushBuffer(delimiter.length + 1);
