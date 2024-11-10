@@ -25,7 +25,7 @@ var _DummyPeerStorage := {}
 export var UseJson := true
 export var ServerPort := 12345
 export var ServerAddress := ""
-export var ServerDebugAddress := "" # For ease of debugging.
+export var ServerDebugAddress := "http://127.0.0.1" # For ease of debugging.
 #GODOG_CLIENT
 export var ConnectToHostInDebug := false
 #GODOG_CLIENT
