@@ -6,7 +6,7 @@ const K_TYPE = "$type"
 
 
 static func SetObject(_d: Dictionary, _o: Object) -> Object:
-	_d = ToVariant(_d)
+	_d = ToDictionary(_d)
 	for _k in _d.keys():
 		_o.set(_k, _d[_k])
 	return _o
@@ -71,8 +71,7 @@ static func ToVariant(_v):
 				return PoolVector3Array()
 			elif ResourceLoader.exists(_t):
 				return SetObject(ToVariant(_v), load(_t).new())
-		for _k in _v.keys():
-			_v[_k] = ToVariant(_v[_k])
+		return ToDictionary(_v)
 	return _v
 
 
@@ -92,6 +91,12 @@ static func ToBasis(_d: Dictionary) -> Basis:
 
 static func ToColor(_d: Dictionary) -> Color:
 	return Color(_d.r, _d.g, _d.b, _d.a)
+
+
+static func ToDictionary(_d: Dictionary) -> Dictionary:
+	for _k in _d.keys():
+		_d[_k] = ToVariant(_d[_k])
+	return _d
 
 
 static func ToNodePath(_d: Dictionary) -> NodePath:
@@ -184,8 +189,7 @@ static func FromVariant(_v):
 	elif _t == TYPE_COLOR:
 		return FromColor(_v)
 	elif _t == TYPE_DICTIONARY:
-		for _k in _v.keys():
-			_v[_k] = FromVariant(_v[_k])
+		return FromDictionary(_v)
 	elif _t == TYPE_INT_ARRAY:
 		return FromPoolIntArray(_v)
 	elif _t == TYPE_NODE_PATH:
@@ -203,7 +207,7 @@ static func FromVariant(_v):
 			_d[K_TYPE] = _class
 		for _type in _v.get_property_list():
 			var _name = _type.name
-			if _name in _v:
+			if _name in _v and _name != "script":
 				_d[_name] = FromVariant(_v.get(_name))
 		return _d
 	elif _t == TYPE_PLANE:
@@ -251,6 +255,12 @@ static func FromBasis(_v: Basis) -> Dictionary:
 
 static func FromColor(_v: Color) -> Dictionary:
 	return { K_TYPE: "Color", r = _v.r, g = _v.g, b = _v.b, a = _v.a, }
+
+
+static func FromDictionary(_v: Dictionary) -> Dictionary:
+	for _k in _v.keys():
+		_v[_k] = FromVariant(_v[_k])
+	return _v
 
 
 static func FromNodePath(_v: NodePath) -> Dictionary:
@@ -320,3 +330,30 @@ static func FromVector2(_v: Vector2) -> Dictionary:
 
 static func FromVector3(_v: Vector3) -> Dictionary:
 	return { K_TYPE: "Vector3", x = _v.x, _y = _v.y, }
+
+
+# - - - - - - - - - - Serialise/Deserialise - - - - - - - - - - 
+
+
+static func Serialise(_v) -> String:
+	return JSON.print(FromVariant(_v))
+
+
+static func _JsonParse(_v: String) -> Dictionary:
+	var _res := JSON.parse(_v)
+	if _res.error == OK:
+		var _parsed = _res.result
+		if typeof(_parsed) == TYPE_DICTIONARY:
+			return _parsed
+	return {}
+
+
+static func DeserialiseTo(_v: String, _o: Object) -> void:
+	SetObject(_JsonParse(_v), _o)
+
+
+static func Deserialise(_v: String):
+	var _dict := _JsonParse(_v)
+	if _dict.empty():
+		return null
+	return ToVariant(_dict)
