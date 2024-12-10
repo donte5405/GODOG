@@ -201,7 +201,7 @@ func _ParsePeerPacketJson(_peerId: int, _isServer: bool) -> void:
 		printerr("%s Sent an empty packet." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
-	var _obj = JSON.parse(_str).result
+	var _obj = Dict.Deserialise(_str)
 	if typeof(_obj) != TYPE_ARRAY:
 		#GODOG_IGNORE
 		printerr("%s Sent an invalid JSON data type packet, not an array." % GetPeerAddress(_peerId))
@@ -246,7 +246,7 @@ func _Rpc(_peerId: int, _funcArgs: Array) -> void:
 		#GODOG_IGNORE
 		return
 	if UseJson:
-		_WsMpPeer.get_peer(_peerId).put_packet(JSON.print(_funcArgs).to_utf8())
+		_WsMpPeer.get_peer(_peerId).put_packet(Dict.Serialise(_funcArgs).to_utf8())
 	else:
 		_WsMpPeer.get_peer(_peerId).put_packet(var2str(_funcArgs).to_utf8())
 
