@@ -339,21 +339,18 @@ static func Serialise(_v) -> String:
 	return JSON.print(FromVariant(_v))
 
 
-static func _JsonParse(_v: String) -> Dictionary:
+static func _JsonParse(_v: String):
 	var _res := JSON.parse(_v)
 	if _res.error == OK:
-		var _parsed = _res.result
-		if typeof(_parsed) == TYPE_DICTIONARY:
-			return _parsed
-	return {}
+		return _res.result
+	return null
 
 
 static func DeserialiseTo(_v: String, _o: Object) -> void:
-	SetObject(_JsonParse(_v), _o)
+	var _res = ToVariant(_JsonParse(_v))
+	if typeof(_res) == TYPE_DICTIONARY:
+		SetObject(_res, _o)
 
 
 static func Deserialise(_v: String):
-	var _dict := _JsonParse(_v)
-	if _dict.empty():
-		return null
-	return ToVariant(_dict)
+	return ToVariant(_JsonParse(_v))
