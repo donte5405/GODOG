@@ -239,6 +239,14 @@ func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 		_func.call_funcv(_funcArgs)
 
 
+func _SimulateNetworkCall(_isServer: bool, _funcArgs: Array) -> void:
+	# Convert data back and forth to simulate server-client communication, easier to detect bugs.
+	if UseJson:
+		_DispatchFuncCall(0, _isServer, Dict.Deserialise(Dict.Serialise(_funcArgs)))
+	else:
+		_DispatchFuncCall(0, _isServer, str2var(var2str(_funcArgs)))
+
+
 func _Rpc(_peerId: int, _funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_IGNORE
@@ -256,7 +264,7 @@ func Request(_funcArgs: Array) -> void:
 	if _WsMpPeer:
 		_Rpc(1, _funcArgs)
 	else:
-		_DispatchFuncCall(0, true, _funcArgs)
+		_SimulateNetworkCall(true, _funcArgs)
 #GODOG_CLIENT
 
 
@@ -285,7 +293,7 @@ func Response(_peerId: int, _funcArgs: Array) -> void:
 	if _WsMpPeer:
 		_Rpc(_peerId, _funcArgs)
 	else:
-		_DispatchFuncCall(0, false, _funcArgs)
+		_SimulateNetworkCall(false, _funcArgs)
 #GODOG_SERVER
 
 
