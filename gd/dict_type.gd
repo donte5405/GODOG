@@ -5,6 +5,24 @@ const K_ARRAY = "$array"
 const K_TYPE = "$type"
 
 
+static func GetNativeClass(_name: String) -> Object:
+	if not Engine.has_meta("_NativeClass"):
+		Engine.set_meta("_NativeClass", {})
+	var _classes = Engine.get_meta("_NativeClass")
+	if not _classes.has(_name):
+		var _script = GDScript.new()
+		_script.set_script(str("static func ", "GetNativeClassReference", "():\n\treturn ", _name, "\n\n"))
+		_script.reload()
+		_classes[_name] = _script.GetNativeClassReference()
+	return _classes[_name]
+
+
+static func NewSameSizeArray(_a: Array) -> Array:
+	var _na = []
+	_na.resize(_a.size())
+	return _na
+
+
 static func SetObject(_d: Dictionary, _o: Object) -> Object:
 	_d = ToDictionary(_d)
 	for _k in _d.keys():
@@ -12,10 +30,11 @@ static func SetObject(_d: Dictionary, _o: Object) -> Object:
 	return _o
 
 
-static func ToVariant(_v):
-	if _v is Array:
-		return ToArray(_v)
-	elif _v is Dictionary:
+static func ToVariant(_v, _r = false):
+	var _vt := typeof(_v)
+	if _vt == TYPE_ARRAY:
+		return ToArray(_v, _r)
+	elif _vt == TYPE_DICTIONARY:
 		if _v.has(K_TYPE):
 			var _t: String = _v[K_TYPE]
 			_v.erase(K_TYPE)
@@ -70,7 +89,9 @@ static func ToVariant(_v):
 					return ToPoolVector3Array(_v[K_ARRAY])
 				return PoolVector3Array()
 			elif ResourceLoader.exists(_t):
-				return SetObject(ToVariant(_v), load(_t).new())
+				return SetObject(_v, load(_t).new())
+			else:
+				return SetObject(_v, GetNativeClass(_t).new())
 		return ToDictionary(_v)
 	return _v
 
@@ -79,10 +100,11 @@ static func ToAABB(_d: Dictionary) -> AABB:
 	return AABB(ToVector3(_d.position), ToVector3(_d.size))
 
 
-static func ToArray(_a: Array) -> Array:
+static func ToArray(_a: Array, _r = false) -> Array:
+	var _na = NewSameSizeArray(_a)
 	for _i in range(_a.size()):
-		_a[_i] = ToVariant(_a[_i])
-	return _a
+		_na[_i] = ToVariant(_a[_i])
+	return _na
 
 
 static func ToBasis(_d: Dictionary) -> Basis:
@@ -94,9 +116,10 @@ static func ToColor(_d: Dictionary) -> Color:
 
 
 static func ToDictionary(_d: Dictionary) -> Dictionary:
+	var _nd = {}
 	for _k in _d.keys():
-		_d[_k] = ToVariant(_d[_k])
-	return _d
+		_nd[_k] = ToVariant(_d[_k], _k == "_ObjectRefs")
+	return _nd
 
 
 static func ToNodePath(_d: Dictionary) -> NodePath:
@@ -177,8 +200,6 @@ static func ToVector3(_d: Dictionary) -> Vector3:
 
 
 static func FromVariant(_v):
-	if not _v:
-		return _v
 	var _t = typeof(_v)
 	if _t == TYPE_AABB:
 		return FromAABB(_v)
@@ -197,18 +218,15 @@ static func FromVariant(_v):
 	elif _t == TYPE_OBJECT:
 		var _d = {}
 		var _class: String = _v.get_class()
-		if _class == "Node":
-			printerr("'Node' serialisation is unsupported. Consider serialise them manually.")
-			return _d
 		var _script: Script = _v.get_script()
 		if _script:
 			_d[K_TYPE] = _script.resource_path
 		else:
 			_d[K_TYPE] = _class
-		for _type in _v.get_property_list():
-			var _name = _type.name
-			if _name in _v and _name != "script":
-				_d[_name] = FromVariant(_v.get(_name))
+		for _p in _v.get_property_list():
+			var _name = _p.name
+			if _name in _v and not ["script", "owner"].has(_name):
+				_d[_name] = FromVariant(_v[_name])
 		return _d
 	elif _t == TYPE_PLANE:
 		return FromPlane(_v)
@@ -244,9 +262,10 @@ static func FromAABB(_v: AABB) -> Dictionary:
 
 
 static func FromArray(_v: Array) -> Array:
+	var _na = NewSameSizeArray(_v)
 	for _i in range(_v.size()):
-			_v[_i] = FromVariant(_v[_i])
-	return _v
+		_na[_i] = FromVariant(_v[_i])
+	return _na
 
 
 static func FromBasis(_v: Basis) -> Dictionary:
@@ -258,9 +277,10 @@ static func FromColor(_v: Color) -> Dictionary:
 
 
 static func FromDictionary(_v: Dictionary) -> Dictionary:
+	var _nd = {}
 	for _k in _v.keys():
-		_v[_k] = FromVariant(_v[_k])
-	return _v
+		_nd[_k] = FromVariant(_v[_k])
+	return _nd
 
 
 static func FromNodePath(_v: NodePath) -> Dictionary:
