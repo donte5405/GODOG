@@ -221,7 +221,7 @@ func _IsValidFuncCall(_funcArgs: Array) -> bool:
 func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_IGNORE
-		printerr("Invalid RPC: %s" % var2str(_funcArgs))
+		printerr("Invalid RPC: %s" % Dict.Serialise(_funcArgs))
 		#GODOG_IGNORE
 		return
 	var _funcName: String = _funcArgs.pop_front()
@@ -250,7 +250,7 @@ func _SimulateNetworkCall(_isServer: bool, _funcArgs: Array) -> void:
 func _Rpc(_peerId: int, _funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_IGNORE
-		printerr("Invalid RPC: %s" % var2str(_funcArgs))
+		printerr("Invalid RPC: %s" % Dict.Serialise(_funcArgs))
 		#GODOG_IGNORE
 		return
 	if UseJson:
