@@ -33,7 +33,7 @@ static func SetObject(_d: Dictionary, _o: Object) -> Object:
 static func ToVariant(_v, _r = false):
 	var _vt := typeof(_v)
 	if _vt == TYPE_ARRAY:
-		return ToArray(_v, _r)
+		return ToArray(_v)
 	elif _vt == TYPE_DICTIONARY:
 		if _v.has(K_TYPE):
 			var _t: String = _v[K_TYPE]
@@ -100,7 +100,7 @@ static func ToAABB(_d: Dictionary) -> AABB:
 	return AABB(ToVector3(_d.position), ToVector3(_d.size))
 
 
-static func ToArray(_a: Array, _r = false) -> Array:
+static func ToArray(_a: Array) -> Array:
 	var _na = NewSameSizeArray(_a)
 	for _i in range(_a.size()):
 		_na[_i] = ToVariant(_a[_i])
@@ -355,7 +355,9 @@ static func FromVector3(_v: Vector3) -> Dictionary:
 # - - - - - - - - - - Serialise/Deserialise - - - - - - - - - - 
 
 
-static func Serialise(_v) -> String:
+static func Serialise(_v, _pretty = false) -> String:
+	if _pretty:
+		return JSON.print(FromVariant(_v), "\t", true)
 	return JSON.print(FromVariant(_v))
 
 
