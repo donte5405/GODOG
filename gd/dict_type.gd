@@ -2,6 +2,8 @@ class_name Dict
 
 
 const K_ARRAY = "$array"
+const K_GROUP = "$group"
+const K_NODES = "$nodes"
 const K_TYPE = "$type"
 
 
@@ -25,6 +27,12 @@ static func NewSameSizeArray(_a: Array) -> Array:
 
 static func SetObject(_d: Dictionary, _o: Object) -> Object:
 	_d = ToDictionary(_d)
+	if _d.has(K_NODES):
+		for _node in _d[K_NODES]:
+			_o.add_child(ToVariant(_node))
+	if _d.has(K_GROUP):
+		for _group in _d[K_GROUP]:
+			_o.add_to_group(_group)
 	for _k in _d.keys():
 		_o.set(_k, _d[_k])
 	return _o
@@ -199,35 +207,51 @@ static func ToVector3(_d: Dictionary) -> Vector3:
 # - - - - - - - - - - To Dictionaries - - - - - - - - - - 
 
 
-static func FromVariant(_v):
+static func FromVariant(_v, _objIds = []):
 	var _t = typeof(_v)
 	if _t == TYPE_AABB:
 		return FromAABB(_v)
 	elif _t == TYPE_ARRAY:
-		return FromArray(_v)
+		return FromArray(_v, _objIds)
 	elif _t == TYPE_BASIS:
 		return FromBasis(_v)
 	elif _t == TYPE_COLOR:
 		return FromColor(_v)
 	elif _t == TYPE_DICTIONARY:
-		return FromDictionary(_v)
+		return FromDictionary(_v, _objIds)
 	elif _t == TYPE_INT_ARRAY:
 		return FromPoolIntArray(_v)
 	elif _t == TYPE_NODE_PATH:
 		return FromNodePath(_v)
 	elif _t == TYPE_OBJECT:
-		var _d = {}
-		var _class: String = _v.get_class()
-		var _script: Script = _v.get_script()
-		if _script:
-			_d[K_TYPE] = _script.resource_path
-		else:
-			_d[K_TYPE] = _class
-		for _p in _v.get_property_list():
-			var _name = _p.name
-			if _name in _v and not ["script", "owner"].has(_name):
-				_d[_name] = FromVariant(_v[_name])
-		return _d
+		if is_instance_valid(_v):
+			var _id: int = _v.get_instance_id()
+			if _objIds.has(_id):
+				return null
+			_objIds.push_back(_id)
+			var _d := {}
+			var _class: String = _v.get_class()
+			var _script: Script = _v.get_script()
+			if _script:
+				_d[K_TYPE] = _script.resource_path
+			else:
+				_d[K_TYPE] = _class
+			for _p in _v.get_property_list():
+				var _name = _p.name
+				if _name in _v and not ["multiplayer", "owner", "script"].has(_name):
+					_d[_name] = FromVariant(_v[_name], _objIds)
+			if _v is Node:
+				var _nodes := []
+				var _groups := []
+				_d[K_NODES] = _nodes
+				_d[K_GROUP] = _groups
+				for _group in _v.get_groups():
+					if not _group.begins_with("_"):
+						_groups.push_back(_group)
+				for _child in _v.get_children():
+					_nodes.push_back(FromVariant(_child, _objIds))
+			return _d
+		return null
 	elif _t == TYPE_PLANE:
 		return FromPlane(_v)
 	elif _t == TYPE_QUAT:
@@ -261,10 +285,10 @@ static func FromAABB(_v: AABB) -> Dictionary:
 	return { K_TYPE: "AABB", position = FromVector3(_v.position), size = FromVector3(_v.size), }
 
 
-static func FromArray(_v: Array) -> Array:
+static func FromArray(_v: Array, _objIds = []) -> Array:
 	var _na = NewSameSizeArray(_v)
 	for _i in range(_v.size()):
-		_na[_i] = FromVariant(_v[_i])
+		_na[_i] = FromVariant(_v[_i], _objIds)
 	return _na
 
 
@@ -276,10 +300,10 @@ static func FromColor(_v: Color) -> Dictionary:
 	return { K_TYPE: "Color", r = _v.r, g = _v.g, b = _v.b, a = _v.a, }
 
 
-static func FromDictionary(_v: Dictionary) -> Dictionary:
+static func FromDictionary(_v: Dictionary, _objIds = []) -> Dictionary:
 	var _nd = {}
 	for _k in _v.keys():
-		_nd[_k] = FromVariant(_v[_k])
+		_nd[_k] = FromVariant(_v[_k], _objIds)
 	return _nd
 
 
