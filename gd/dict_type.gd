@@ -25,11 +25,11 @@ static func NewSameSizeArray(_a: Array) -> Array:
 	return _na
 
 
-static func SetObject(_d: Dictionary, _o: Object) -> Object:
-	_d = ToDictionary(_d)
+static func SetObject(_d: Dictionary, _o: Object, _allowSubObjects = true) -> Object:
+	_d = ToDictionary(_d, _allowSubObjects)
 	if _d.has(K_NODES):
 		for _node in _d[K_NODES]:
-			_o.add_child(ToVariant(_node))
+			_o.add_child(ToVariant(_node, _allowSubObjects))
 	if _d.has(K_GROUP):
 		for _group in _d[K_GROUP]:
 			_o.add_to_group(_group)
@@ -38,10 +38,10 @@ static func SetObject(_d: Dictionary, _o: Object) -> Object:
 	return _o
 
 
-static func ToVariant(_v, _r = false):
+static func ToVariant(_v, _allowObjects = true):
 	var _vt := typeof(_v)
 	if _vt == TYPE_ARRAY:
-		return ToArray(_v)
+		return ToArray(_v, _allowObjects)
 	elif _vt == TYPE_DICTIONARY:
 		if _v.has(K_TYPE):
 			var _t: String = _v[K_TYPE]
@@ -96,11 +96,12 @@ static func ToVariant(_v, _r = false):
 				if _v.has(K_ARRAY):
 					return ToPoolVector3Array(_v[K_ARRAY])
 				return PoolVector3Array()
-			elif ResourceLoader.exists(_t):
-				return SetObject(_v, load(_t).new())
-			else:
-				return SetObject(_v, GetNativeClass(_t).new())
-		return ToDictionary(_v)
+			elif _allowObjects:
+				if ResourceLoader.exists(_t):
+					return SetObject(_v, load(_t).new(), _allowObjects)
+				else:
+					return SetObject(_v, GetNativeClass(_t).new(), _allowObjects)
+		return ToDictionary(_v, _allowObjects)
 	return _v
 
 
@@ -108,10 +109,10 @@ static func ToAABB(_d: Dictionary) -> AABB:
 	return AABB(ToVector3(_d.position), ToVector3(_d.size))
 
 
-static func ToArray(_a: Array) -> Array:
+static func ToArray(_a: Array, _allowObjects = true) -> Array:
 	var _na = NewSameSizeArray(_a)
 	for _i in range(_a.size()):
-		_na[_i] = ToVariant(_a[_i])
+		_na[_i] = ToVariant(_a[_i], _allowObjects)
 	return _na
 
 
@@ -123,10 +124,10 @@ static func ToColor(_d: Dictionary) -> Color:
 	return Color(_d.r, _d.g, _d.b, _d.a)
 
 
-static func ToDictionary(_d: Dictionary) -> Dictionary:
+static func ToDictionary(_d: Dictionary, _allowObjects = true) -> Dictionary:
 	var _nd = {}
 	for _k in _d.keys():
-		_nd[_k] = ToVariant(_d[_k], _k == "_ObjectRefs")
+		_nd[_k] = ToVariant(_d[_k], _allowObjects)
 	return _nd
 
 
@@ -207,50 +208,51 @@ static func ToVector3(_d: Dictionary) -> Vector3:
 # - - - - - - - - - - To Dictionaries - - - - - - - - - - 
 
 
-static func FromVariant(_v, _objIds = []):
+static func FromVariant(_v, _includeObjects = true, _objIds = []):
 	var _t = typeof(_v)
 	if _t == TYPE_AABB:
 		return FromAABB(_v)
 	elif _t == TYPE_ARRAY:
-		return FromArray(_v, _objIds)
+		return FromArray(_v, _includeObjects, _objIds)
 	elif _t == TYPE_BASIS:
 		return FromBasis(_v)
 	elif _t == TYPE_COLOR:
 		return FromColor(_v)
 	elif _t == TYPE_DICTIONARY:
-		return FromDictionary(_v, _objIds)
+		return FromDictionary(_v, _includeObjects, _objIds)
 	elif _t == TYPE_INT_ARRAY:
 		return FromPoolIntArray(_v)
 	elif _t == TYPE_NODE_PATH:
 		return FromNodePath(_v)
 	elif _t == TYPE_OBJECT:
-		if is_instance_valid(_v):
-			var _id: int = _v.get_instance_id()
-			if _objIds.has(_id):
-				return null
-			_objIds.push_back(_id)
-			var _d := {}
-			var _class: String = _v.get_class()
-			var _script: Script = _v.get_script()
-			if _script:
-				_d[K_TYPE] = _script.resource_path
-			else:
-				_d[K_TYPE] = _class
-			for _p in _v.get_property_list():
-				var _name = _p.name
-				if _name in _v and not ["multiplayer", "owner", "script"].has(_name):
-					_d[_name] = FromVariant(_v[_name], _objIds)
-			if _v is Node:
-				var _nodes := []
-				var _groups := []
-				_d[K_NODES] = _nodes
-				_d[K_GROUP] = _groups
-				for _group in _v.get_groups():
-					if not _group.begins_with("_"):
-						_groups.push_back(_group)
-				for _child in _v.get_children():
-					_nodes.push_back(FromVariant(_child, _objIds))
-			return _d
+		if _includeObjects:
+			if is_instance_valid(_v):
+				var _id: int = _v.get_instance_id()
+				if _objIds.has(_id):
+					return null
+				_objIds.push_back(_id)
+				var _d := {}
+				var _class: String = _v.get_class()
+				var _script: Script = _v.get_script()
+				if _script:
+					_d[K_TYPE] = _script.resource_path
+				else:
+					_d[K_TYPE] = _class
+				for _p in _v.get_property_list():
+					var _name = _p.name
+					if _name in _v and not ["multiplayer", "owner", "script"].has(_name):
+						_d[_name] = FromVariant(_v[_name], _includeObjects, _objIds)
+				if _v is Node:
+					var _nodes := []
+					var _groups := []
+					_d[K_NODES] = _nodes
+					_d[K_GROUP] = _groups
+					for _group in _v.get_groups():
+						if not _group.begins_with("_"):
+							_groups.push_back(_group)
+					for _child in _v.get_children():
+						_nodes.push_back(FromVariant(_child, _includeObjects, _objIds))
+				return _d
 		return null
 	elif _t == TYPE_PLANE:
 		return FromPlane(_v)
@@ -285,10 +287,10 @@ static func FromAABB(_v: AABB) -> Dictionary:
 	return { K_TYPE: "AABB", position = FromVector3(_v.position), size = FromVector3(_v.size), }
 
 
-static func FromArray(_v: Array, _objIds = []) -> Array:
+static func FromArray(_v: Array, _includeObjects = true, _objIds = []) -> Array:
 	var _na = NewSameSizeArray(_v)
 	for _i in range(_v.size()):
-		_na[_i] = FromVariant(_v[_i], _objIds)
+		_na[_i] = FromVariant(_v[_i], _includeObjects, _objIds)
 	return _na
 
 
@@ -300,10 +302,10 @@ static func FromColor(_v: Color) -> Dictionary:
 	return { K_TYPE: "Color", r = _v.r, g = _v.g, b = _v.b, a = _v.a, }
 
 
-static func FromDictionary(_v: Dictionary, _objIds = []) -> Dictionary:
+static func FromDictionary(_v: Dictionary, _includeObjects = true, _objIds = []) -> Dictionary:
 	var _nd = {}
 	for _k in _v.keys():
-		_nd[_k] = FromVariant(_v[_k], _objIds)
+		_nd[_k] = FromVariant(_v[_k], _includeObjects, _objIds)
 	return _nd
 
 
@@ -379,10 +381,10 @@ static func FromVector3(_v: Vector3) -> Dictionary:
 # - - - - - - - - - - Serialise/Deserialise - - - - - - - - - - 
 
 
-static func Serialise(_v, _pretty = false) -> String:
+static func Serialise(_v, _pretty = false, _includeObjects = true) -> String:
 	if _pretty:
-		return JSON.print(FromVariant(_v), "\t", true)
-	return JSON.print(FromVariant(_v))
+		return JSON.print(FromVariant(_v, _includeObjects), "\t", true)
+	return JSON.print(FromVariant(_v, _includeObjects))
 
 
 static func _JsonParse(_v: String):
@@ -392,11 +394,11 @@ static func _JsonParse(_v: String):
 	return null
 
 
-static func DeserialiseTo(_v: String, _o: Object) -> void:
-	var _res = ToVariant(_JsonParse(_v))
+static func DeserialiseTo(_v: String, _o: Object, _allowSubObjects = true) -> void:
+	var _res = ToVariant(_JsonParse(_v), _allowSubObjects)
 	if typeof(_res) == TYPE_DICTIONARY:
-		SetObject(_res, _o)
+		SetObject(_res, _o, _allowSubObjects)
 
 
-static func Deserialise(_v: String):
-	return ToVariant(_JsonParse(_v))
+static func Deserialise(_v: String, _allowObjects = true):
+	return ToVariant(_JsonParse(_v), _allowObjects)

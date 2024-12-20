@@ -26,6 +26,7 @@ export var UseJson := true
 export var ServerPort := 12345
 export var ServerAddress := ""
 export var ServerDebugAddress := "http://127.0.0.1" # For ease of debugging.
+export var AllowObjectDeserialiseOnServer := false
 #GODOG_CLIENT
 export var ConnectToHostInDebug := false
 #GODOG_CLIENT
@@ -201,7 +202,7 @@ func _ParsePeerPacketJson(_peerId: int, _isServer: bool) -> void:
 		printerr("%s Sent an empty packet." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
-	var _obj = Dict.Deserialise(_str)
+	var _obj = Dict.Deserialise(_str, AllowObjectDeserialiseOnServer if _isServer else true)
 	if typeof(_obj) != TYPE_ARRAY:
 		#GODOG_IGNORE
 		printerr("%s Sent an invalid JSON data type packet, not an array." % GetPeerAddress(_peerId))
@@ -221,7 +222,7 @@ func _IsValidFuncCall(_funcArgs: Array) -> bool:
 func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_IGNORE
-		printerr("Invalid RPC: %s" % Dict.Serialise(_funcArgs))
+		printerr("Invalid RPC: %s" % Dict.Serialise(_funcArgs, true))
 		#GODOG_IGNORE
 		return
 	var _funcName: String = _funcArgs.pop_front()
@@ -239,22 +240,25 @@ func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 		_func.call_funcv(_funcArgs)
 
 
-func _SimulateNetworkCall(_isServer: bool, _funcArgs: Array) -> void:
+func _SimulateNetworkCall(_funcArgs: Array, _toServer: bool) -> void:
 	# Convert data back and forth to simulate server-client communication, easier to detect bugs.
 	if UseJson:
-		_DispatchFuncCall(0, _isServer, Dict.Deserialise(Dict.Serialise(_funcArgs)))
+		if _toServer:
+			_DispatchFuncCall(0, true, Dict.Deserialise(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer), AllowObjectDeserialiseOnServer))
+		else:
+			_DispatchFuncCall(0, false, Dict.Deserialise(Dict.Serialise(_funcArgs, false, true), true))
 	else:
-		_DispatchFuncCall(0, _isServer, str2var(var2str(_funcArgs)))
+		_DispatchFuncCall(0, _toServer, str2var(var2str(_funcArgs)))
 
 
-func _Rpc(_peerId: int, _funcArgs: Array) -> void:
+func _Rpc(_peerId: int, _funcArgs: Array, _toServer: bool) -> void:
 	if not _IsValidFuncCall(_funcArgs):
 		#GODOG_IGNORE
 		printerr("Invalid RPC: %s" % Dict.Serialise(_funcArgs))
 		#GODOG_IGNORE
 		return
 	if UseJson:
-		_WsMpPeer.get_peer(_peerId).put_packet(Dict.Serialise(_funcArgs).to_utf8())
+		_WsMpPeer.get_peer(_peerId).put_packet(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer if _toServer else true).to_utf8())
 	else:
 		_WsMpPeer.get_peer(_peerId).put_packet(var2str(_funcArgs).to_utf8())
 
@@ -262,9 +266,9 @@ func _Rpc(_peerId: int, _funcArgs: Array) -> void:
 #GODOG_CLIENT
 func Request(_funcArgs: Array) -> void:
 	if _WsMpPeer:
-		_Rpc(1, _funcArgs)
+		_Rpc(1, _funcArgs, true)
 	else:
-		_SimulateNetworkCall(true, _funcArgs)
+		_SimulateNetworkCall(_funcArgs, true)
 #GODOG_CLIENT
 
 
@@ -291,9 +295,9 @@ func PassCall(_peerId: int, _funcArgs: Array) -> void:
 
 func Response(_peerId: int, _funcArgs: Array) -> void:
 	if _WsMpPeer:
-		_Rpc(_peerId, _funcArgs)
+		_Rpc(_peerId, _funcArgs, false)
 	else:
-		_SimulateNetworkCall(false, _funcArgs)
+		_SimulateNetworkCall(_funcArgs, false)
 #GODOG_SERVER
 
 
