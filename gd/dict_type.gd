@@ -40,9 +40,6 @@ static func SetObject(_d: Dictionary, _o: Object, _allowSubObjects = true) -> Ob
 		for _group in _groups:
 			_o.add_to_group(_group)
 	for _k in _d.keys():
-		if _k == "tile_data":
-			print(typeof(_o.get("tile_data")))
-			print(_d[_k])
 		_o.set(_k, _d[_k])
 	return _o
 
