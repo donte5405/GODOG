@@ -7,14 +7,16 @@ const K_NODES = "$nodes"
 const K_TYPE = "$type"
 
 
+
 static func GetNativeClass(_name: String) -> Object:
 	if not Engine.has_meta("_NativeClass"):
 		Engine.set_meta("_NativeClass", {})
 	var _classes = Engine.get_meta("_NativeClass")
 	if not _classes.has(_name):
 		var _script = GDScript.new()
-		_script.set_script(str("static func ", "GetNativeClassReference", "():\n\treturn ", _name, "\n\n"))
-		_script.reload()
+		_script.source_code = str("static func ", "GetNativeClassReference", "():\n\treturn ", _name, "\n\n")
+		if _script.reload() != OK:
+			return null
 		_classes[_name] = _script.GetNativeClassReference()
 	return _classes[_name]
 
@@ -100,7 +102,11 @@ static func ToVariant(_v, _allowObjects = true):
 				if ResourceLoader.exists(_t):
 					return SetObject(_v, load(_t).new(), _allowObjects)
 				else:
-					return SetObject(_v, GetNativeClass(_t).new(), _allowObjects)
+					var _nativeClass = GetNativeClass(_t)
+					if _nativeClass:
+						return SetObject(_v, _nativeClass.new(), _allowObjects)
+					else:
+						return null
 		return ToDictionary(_v, _allowObjects)
 	return _v
 
@@ -241,7 +247,7 @@ static func FromVariant(_v, _includeObjects = true, _objIds = []):
 				for _p in _v.get_property_list():
 					var _name = _p.name
 					if _name in _v and not ["multiplayer", "owner", "script"].has(_name):
-						_d[_name] = FromVariant(_v[_name], _includeObjects, _objIds)
+						_d[_name] = FromVariant(_v.get(_name), _includeObjects, _objIds)
 				if _v is Node:
 					var _nodes := []
 					var _groups := []
@@ -359,7 +365,7 @@ static func FromQuat(_v: Quat) -> Dictionary:
 
 
 static func FromRect2(_v: Rect2) -> Dictionary:
-	return { K_TYPE: "Rect2", position = _v.position, size = _v.size, }
+	return { K_TYPE: "Rect2", position = FromVector2(_v.position), size = FromVector2(_v.size), }
 
 
 static func FromTransform(_v: Transform) -> Dictionary:
@@ -367,7 +373,7 @@ static func FromTransform(_v: Transform) -> Dictionary:
 
 
 static func FromTransform2D(_v: Transform2D) -> Dictionary:
-	return { K_TYPE: "Transform2D", x = _v.x, y = _v.y, origin = _v.origin, }
+	return { K_TYPE: "Transform2D", x = FromVector2(_v.x), y = FromVector2(_v.y), origin = FromVector2(_v.origin), }
 
 
 static func FromVector2(_v: Vector2) -> Dictionary:
