@@ -5,7 +5,7 @@ const K_ARRAY = "$array"
 const K_GROUP = "$group"
 const K_NODES = "$nodes"
 const K_TYPE = "$type"
-
+const IGNORED_PROPERTIES = PoolStringArray(["multiplayer", "owner", "script", "load_path", "resource_path", "filename"])
 
 
 static func GetNativeClass(_name: String) -> Object:
@@ -30,12 +30,19 @@ static func NewSameSizeArray(_a: Array) -> Array:
 static func SetObject(_d: Dictionary, _o: Object, _allowSubObjects = true) -> Object:
 	_d = ToDictionary(_d, _allowSubObjects)
 	if _d.has(K_NODES):
-		for _node in _d[K_NODES]:
+		var _nodes = _d[K_NODES]
+		_d.erase(K_NODES)
+		for _node in _nodes:
 			_o.add_child(ToVariant(_node, _allowSubObjects))
 	if _d.has(K_GROUP):
-		for _group in _d[K_GROUP]:
+		var _groups = _d[K_GROUP]
+		_d.erase(K_GROUP)
+		for _group in _groups:
 			_o.add_to_group(_group)
 	for _k in _d.keys():
+		if _k == "tile_data":
+			print(typeof(_o.get("tile_data")))
+			print(_d[_k])
 		_o.set(_k, _d[_k])
 	return _o
 
@@ -246,7 +253,7 @@ static func FromVariant(_v, _includeObjects = true, _objIds = []):
 					_d[K_TYPE] = _class
 				for _p in _v.get_property_list():
 					var _name = _p.name
-					if _name in _v and not ["multiplayer", "owner", "script"].has(_name):
+					if _name in _v and not IGNORED_PROPERTIES.has(_name):
 						_d[_name] = FromVariant(_v.get(_name), _includeObjects, _objIds)
 				if _v is Node:
 					var _nodes := []
