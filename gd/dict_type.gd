@@ -5,6 +5,7 @@ const K_ARRAY = "$array"
 const K_GROUP = "$group"
 const K_NODES = "$nodes"
 const K_TYPE = "$type"
+const K_RES = "$res"
 const IGNORED_PROPERTIES = PoolStringArray(["multiplayer", "owner", "script", "load_path", "resource_path", "filename"])
 
 
@@ -111,6 +112,12 @@ static func ToVariant(_v, _allowObjects = true):
 						return SetObject(_v, _nativeClass.new(), _allowObjects)
 					else:
 						return null
+		elif _v.has(K_RES):
+			var _path: String = _v[K_RES]
+			_v.erase(K_RES)
+			if ResourceLoader.exists(_path):
+				return load(_path)
+			return null
 		return ToDictionary(_v, _allowObjects)
 	return _v
 
@@ -242,12 +249,15 @@ static func FromVariant(_v, _includeObjects = true, _objIds = []):
 					return null
 				_objIds.push_back(_id)
 				var _d := {}
-				var _class: String = _v.get_class()
+				if _v is Resource:
+					# Never allow resource alternation for resources on disk.
+					_d[K_RES] = _v.resource_path
+					return _d
 				var _script: Script = _v.get_script()
 				if _script:
 					_d[K_TYPE] = _script.resource_path
 				else:
-					_d[K_TYPE] = _class
+					_d[K_TYPE] = _v.get_class()
 				for _p in _v.get_property_list():
 					var _name = _p.name
 					if _name in _v and not IGNORED_PROPERTIES.has(_name):
