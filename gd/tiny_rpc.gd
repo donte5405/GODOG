@@ -233,6 +233,7 @@ func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 		return
 	var _func: FuncRef = _FuncMap[_funcName]
 	if not _func.is_valid():
+		_FuncMap.erase(_funcName)
 		return
 	if _isServer:
 		_func.call_funcv([ _peerId ] + _funcArgs)
