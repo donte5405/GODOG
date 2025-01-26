@@ -192,7 +192,7 @@ func _ParsePeerPacket(_peerId: int, _isServer: bool) -> void:
 		printerr("%s Sent an invalid data type packet, not an array." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
-	_DispatchFuncCall(_peerId, _isServer, _obj)
+	_DispatchFuncCalls(_peerId, _isServer, _obj)
 
 
 func _ParsePeerPacketJson(_peerId: int, _isServer: bool) -> void:
@@ -208,22 +208,27 @@ func _ParsePeerPacketJson(_peerId: int, _isServer: bool) -> void:
 		printerr("%s Sent an invalid JSON data type packet, not an array." % GetPeerAddress(_peerId))
 		#GODOG_IGNORE
 		return
-	_DispatchFuncCall(_peerId, _isServer, _obj)
+	_DispatchFuncCalls(_peerId, _isServer, _obj)
 
 
-func _IsValidFuncCall(_funcArgs: Array) -> bool:
-	if _funcArgs.size() == 0:
-		return false
-	if typeof(_funcArgs[0]) != TYPE_STRING:
-		return false
-	return true
+func _DispatchFuncCalls(_peerId: int, _isServer: bool, _calls: Array) -> void:
+	if _calls.size():
+		if not _isServer:
+			if _calls[0] is Array:
+				for _ref in _calls:
+					if _ref[0] == "_Delay":
+						var _timeLeft: float = _ref[1]
+						while _timeLeft > 0:
+							yield(get_tree(), "idle_frame")
+							_timeLeft -= get_tree().get_process_delta_time()
+					else:
+						_DispatchFuncCall(_peerId, _isServer, _ref)
+				return
+		_DispatchFuncCall(_peerId, _isServer, _calls)		
 
 
 func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
-	if not _IsValidFuncCall(_funcArgs):
-		#GODOG_IGNORE
-		printerr("Invalid RPC: %s" % Dict.Serialise(_funcArgs, true))
-		#GODOG_IGNORE
+	if typeof(_funcArgs[0]) != TYPE_STRING:
 		return
 	var _funcName: String = _funcArgs.pop_front()
 	if not (_funcName in _FuncMap):
@@ -241,35 +246,40 @@ func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 		_func.call_funcv(_funcArgs)
 
 
+#GODOG_IGNORE
 func _SimulateNetworkCall(_funcArgs: Array, _toServer: bool) -> void:
 	# Convert data back and forth to simulate server-client communication, easier to detect bugs.
+	print(str("TRPC: ", Dict.Serialise(_funcArgs)))
 	if UseJson:
 		if _toServer:
-			_DispatchFuncCall(0, true, Dict.Deserialise(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer), AllowObjectDeserialiseOnServer))
+			_DispatchFuncCalls(0, true, Dict.Deserialise(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer), AllowObjectDeserialiseOnServer))
 		else:
-			_DispatchFuncCall(0, false, Dict.Deserialise(Dict.Serialise(_funcArgs, false, true), true))
+			_DispatchFuncCalls(0, false, Dict.Deserialise(Dict.Serialise(_funcArgs, false, true), true))
 	else:
-		_DispatchFuncCall(0, _toServer, str2var(var2str(_funcArgs)))
+		_DispatchFuncCalls(0, _toServer, str2var(var2str(_funcArgs)))
+#GODOG_IGNORE
 
 
 func _Rpc(_peerId: int, _funcArgs: Array, _toServer: bool) -> void:
-	if not _IsValidFuncCall(_funcArgs):
-		#GODOG_IGNORE
-		printerr("Invalid RPC: %s" % Dict.Serialise(_funcArgs))
-		#GODOG_IGNORE
-		return
 	if UseJson:
 		_WsMpPeer.get_peer(_peerId).put_packet(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer if _toServer else true).to_utf8())
 	else:
 		_WsMpPeer.get_peer(_peerId).put_packet(var2str(_funcArgs).to_utf8())
 
 
+
+func CallFunc(_peerId: int, _funcArgs: Array) -> void:
+	_DispatchFuncCalls(_peerId, true, _funcArgs)
+
+
 #GODOG_CLIENT
 func Request(_funcArgs: Array) -> void:
 	if _WsMpPeer:
 		_Rpc(1, _funcArgs, true)
+	#GODOG_IGNORE
 	else:
-		_SimulateNetworkCall(_funcArgs, true)
+		call_deferred("_SimulateNetworkCall", _funcArgs, true)
+	#GODOG_IGNORE
 #GODOG_CLIENT
 
 
@@ -290,15 +300,13 @@ func GetPeerStorage(_peerId: int) -> Dictionary:
 	return _PeerStorage[_peerId]
 
 
-func PassCall(_peerId: int, _funcArgs: Array) -> void:
-	_DispatchFuncCall(_peerId, true, _funcArgs)
-
-
 func Response(_peerId: int, _funcArgs: Array) -> void:
 	if _WsMpPeer:
 		_Rpc(_peerId, _funcArgs, false)
+	#GODOG_IGNORE
 	else:
-		_SimulateNetworkCall(_funcArgs, false)
+		call_deferred("_SimulateNetworkCall", _funcArgs, false)
+	#GODOG_IGNORE
 #GODOG_SERVER
 
 
