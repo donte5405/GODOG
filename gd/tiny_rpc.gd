@@ -236,14 +236,17 @@ func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 		printerr("Function '%s' not found, RPC failed." % _funcName)
 		#GODOG_IGNORE
 		return
-	var _func: FuncRef = _FuncMap[_funcName]
-	if not _func.is_valid():
-		_FuncMap.erase(_funcName)
-		return
 	if _isServer:
-		_func.call_funcv([ _peerId ] + _funcArgs)
-	else:
+		_funcArgs = [ _peerId ] + _funcArgs
+	var _funcs: Array = _FuncMap[_funcName]
+	var _i := 0
+	while _i < _funcs.size():
+		var _func: FuncRef = _funcs[_i]
+		if not _func.is_valid():
+			_funcs.erase(_i)
+			continue
 		_func.call_funcv(_funcArgs)
+		_i += 1
 
 
 #GODOG_IGNORE
@@ -267,9 +270,12 @@ func _Rpc(_peerId: int, _funcArgs: Array, _toServer: bool) -> void:
 		_WsMpPeer.get_peer(_peerId).put_packet(var2str(_funcArgs).to_utf8())
 
 
-
-func CallFunc(_peerId: int, _funcArgs: Array) -> void:
+func ServerCallFunc(_peerId: int, _funcArgs: Array) -> void:
 	_DispatchFuncCalls(_peerId, true, _funcArgs)
+
+
+func CallFunc(_funcArgs: Array) -> void:
+	_DispatchFuncCalls(1, true, _funcArgs)
 
 
 #GODOG_CLIENT
@@ -322,12 +328,9 @@ func GetServerUrl() -> String:
 func RegisterFunc(_funcName: String, _obj: Object, _objFuncName: String = "") -> void:
 	if not _objFuncName:
 		_objFuncName = _funcName
-	if _objFuncName in _FuncMap:
-		#GODOG_IGNORE
-		printerr("'%s' already got registered, replacing..." % _funcName)
-		#GODOG_IGNORE
-		pass
-	_FuncMap[_funcName] = funcref(_obj, _objFuncName)
+	if not (_funcName in _FuncMap):
+		_FuncMap[_funcName] = []
+	_FuncMap[_funcName].push_back(funcref(_obj, _objFuncName))
 
 
 func _ready() -> void:
