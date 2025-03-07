@@ -261,6 +261,7 @@ export class GDParser {
 	 * @param {number} currentPos
 	 */
 	_getOrAddPrivateLabel(sourceLabel, tokens, currentPos, fromUser = false) {
+		if (bannedLabels.includes(sourceLabel)) return sourceLabel;
 		if (!this.privateLabels[sourceLabel]) {
 			const privateLabel = labels.get();
 			this.privateLabels[sourceLabel] = privateLabel;
