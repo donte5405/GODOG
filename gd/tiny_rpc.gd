@@ -243,7 +243,7 @@ func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 	while _i < _funcs.size():
 		var _func: FuncRef = _funcs[_i]
 		if not _func.is_valid():
-			_funcs.erase(_i)
+			_funcs.remove(_i)
 			continue
 		_func.call_funcv(_funcArgs)
 		_i += 1
