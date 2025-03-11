@@ -224,7 +224,7 @@ func _DispatchFuncCalls(_peerId: int, _isServer: bool, _calls: Array) -> void:
 					else:
 						_DispatchFuncCall(_peerId, _isServer, _ref)
 				return
-		_DispatchFuncCall(_peerId, _isServer, _calls)		
+		_DispatchFuncCall(_peerId, _isServer, _calls)
 
 
 func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
