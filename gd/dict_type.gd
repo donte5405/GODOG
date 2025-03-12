@@ -244,15 +244,15 @@ static func FromVariant(_v, _includeObjects = true, _objIds = []):
 	elif _t == TYPE_OBJECT:
 		if _includeObjects:
 			if is_instance_valid(_v):
-				var _id: int = _v.get_instance_id()
-				if _objIds.has(_id):
-					return null
-				_objIds.push_back(_id)
 				var _d := {}
 				if _v is Resource:
 					# Never allow resource alternation for resources on disk.
 					_d[K_RES] = _v.resource_path
 					return _d
+				var _id: int = _v.get_instance_id()
+				if _objIds.has(_id):
+					return null
+				_objIds.push_back(_id)
 				var _script: Script = _v.get_script()
 				if _script:
 					_d[K_TYPE] = _script.resource_path
