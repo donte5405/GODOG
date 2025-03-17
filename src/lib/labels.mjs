@@ -157,7 +157,12 @@ export class Labels {
 		this.countOccurence(name);
 		if (!this.list.includes(name)) {
 			if (this.getId) {
-				return this.map(name, this.getId.get());
+				// FIX: Sometimes the short names are the ones that exist in user's source files.
+				let newId = "";
+				do {
+					newId = this.getId.get();
+				} while (this.list.includes(newId));
+				return this.map(name, newId);
 			}
 			return this.map(name, getUniqueId());
 		}
@@ -175,7 +180,12 @@ export class Labels {
 		this.listMap = {};
 		for (const name of listCopy) {
 			if (bannedLabels.includes(name)) continue;
-			this.map(name, getId.get());
+			// FIX: Sometimes the short names are the ones that exist in user's source files.
+			let newId = "";
+			do {
+				newId = getId.get();
+			} while (listCopy.includes(newId));
+			this.map(name, newId);
 		}
 	}
 
