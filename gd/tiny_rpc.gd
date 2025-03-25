@@ -220,7 +220,7 @@ func _DispatchFuncCalls(_peerId: int, _isServer: bool, _calls: Array) -> void:
 						var _timeLeft: float = _ref[1]
 						while _timeLeft > 0:
 							yield(get_tree(), "idle_frame")
-							_timeLeft -= get_tree().get_process_delta_time()
+							_timeLeft -= get_process_delta_time()
 					else:
 						_DispatchFuncCall(_peerId, _isServer, _ref)
 				return
