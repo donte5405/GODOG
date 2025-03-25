@@ -19,7 +19,7 @@ var _WsMpPeer: WebSocketMultiplayerPeer
 var _PeerStorage := {}
 #GODOG_SERVER
 #GODOG_IGNORE
-var _DummyPeerStorage := {}
+var _DummyPeerStorage := NewPeerStorage()
 #GODOG_IGNORE
 
 export var UseJson := true
@@ -33,6 +33,7 @@ export var ConnectToHostInDebug := false
 #GODOG_SERVER
 export var MaxConnections := 4096
 export var BufferMaxLength := 131072 # 128 KiB
+export var ClientDelaySeconds := 0.05
 export(String, FILE, "*.crt") var SslPublicKeyPath := ""
 export(String, FILE, "*.key") var SslPrivateKeyPath := ""
 #GODOG_SERVER
@@ -54,7 +55,7 @@ class TrpcServer extends Node:
 
 	func _PeerConnected(_peerId: int, _protocol: String = "") -> void:
 		CountConnections(1)
-		_Trpc._PeerStorage[_peerId] = {}
+		_Trpc._PeerStorage[_peerId] = _Trpc.NewPeerStorage()
 		_Trpc.emit_signal("PeerConnected", _peerId)
 		#GODOG_IGNORE
 		print("OPEN IP: %s, id =  %d, proto = %s" % [_WsServer.get_peer(_peerId).get_connected_host(), _peerId, _protocol])
@@ -78,6 +79,8 @@ class TrpcServer extends Node:
 
 
 	func _DataReceived(_peerId: int) -> void:
+		if _Trpc.IsClientTooFast(_peerId):
+			return
 		_Trpc._ParsePeerPacket(_peerId, true)
 
 
@@ -230,6 +233,9 @@ func _DispatchFuncCalls(_peerId: int, _isServer: bool, _calls: Array) -> void:
 func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 	if typeof(_funcArgs[0]) != TYPE_STRING:
 		return
+	#GODOG_IGNORE
+	print(str("TRPC: ", Dict.Serialise(_funcArgs)))
+	#GODOG_IGNORE
 	var _funcName: String = _funcArgs.pop_front()
 	if not (_funcName in _FuncMap):
 		#GODOG_IGNORE
@@ -252,13 +258,17 @@ func _DispatchFuncCall(_peerId: int, _isServer: bool, _funcArgs: Array) -> void:
 #GODOG_IGNORE
 func _SimulateNetworkCall(_funcArgs: Array, _toServer: bool) -> void:
 	# Convert data back and forth to simulate server-client communication, easier to detect bugs.
-	print(str("TRPC: ", Dict.Serialise(_funcArgs)))
 	if UseJson:
 		if _toServer:
+			if IsClientTooFast(0):
+				return
 			_DispatchFuncCalls(0, true, Dict.Deserialise(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer), AllowObjectDeserialiseOnServer))
 		else:
 			_DispatchFuncCalls(0, false, Dict.Deserialise(Dict.Serialise(_funcArgs, false, true), true))
 	else:
+		if _toServer:
+			if IsClientTooFast(0):
+				return
 		_DispatchFuncCalls(0, _toServer, str2var(var2str(_funcArgs)))
 #GODOG_IGNORE
 
@@ -290,6 +300,21 @@ func Request(_funcArgs: Array) -> void:
 
 
 #GODOG_SERVER
+func NewPeerStorage() -> Dictionary:
+	return { RecentPacketTimestamp = Time.get_unix_time_from_system() }
+
+
+func IsClientTooFast(_peerId: int) -> bool:
+	if ClientDelaySeconds == 0:
+		return false
+	var _storage = GetPeerStorage(_peerId)
+	var _currentTime = Time.get_unix_time_from_system()
+	if _currentTime - _storage.RecentPacketTimestamp < ClientDelaySeconds:
+		return true
+	_storage.RecentPacketTimestamp = _currentTime
+	return false
+
+
 func GetPeerAddress(_peerId: int) -> String:
 	#GODOG_IGNORE
 	return "localhost"
