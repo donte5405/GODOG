@@ -4,7 +4,7 @@ import { shuffleArray } from "./shuffle.mjs";
 import { getUniqueId } from "./strings.mjs";
 
 
-const charCodeFirstDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
+const charCodeFirstDigit = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const charCode = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_";
 
 
