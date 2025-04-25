@@ -21,7 +21,7 @@ import {
 	processNodePath,
 } from "./strings.mjs";
 import { assemble, tokenise } from "./token.mjs";
-import { dontMeltPath } from "./melt.mjs";
+import { addPossibleGodotPath, dontMeltPath } from "./melt.mjs";
 import { randomUUID } from "crypto";
 // import { writeFileSync } from "fs";
 // import { randomUUID } from "crypto";
@@ -405,6 +405,7 @@ export class GDParser {
 					const [ pathProtocol, path ] = getProtocolAndPath(str);
 					if (pathProtocol === "res") {
 						if (!getConfig().meltEnabled) return token;
+						addPossibleGodotPath(path);
 						const filePath = join(getConfig().projDirPath, path);
 						if (checkFileExtension(filePath, [ "tscn", "tres", "gd" ])) {
 							if (filePath.indexOf("%") >= 0) {

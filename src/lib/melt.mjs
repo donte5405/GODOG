@@ -20,6 +20,8 @@ const allRemaps = {};
 const mapsToChange = [];
 /** @type {Remap[]} */
 const mapsToMelt = [];
+/** @type {string[]} */
+const oldGodotPaths = [];
 
 
 /**
@@ -118,12 +120,50 @@ class Remap {
 
 
 /**
+ * @param {string} str 
+ * @param {string} old
+ * @param {string} newOne
+ */
+function formatAllPossibleStringTypes(str, old, newOne) {
+	return str.split(`'${old}'`).join(`'${newOne}'`)
+	.split(`"${old}"`).join(`"${newOne}"`)
+	.split(`'*${old}'`).join(`'*${newOne}'`)
+	.split(`"*${old}"`).join(`"*${newOne}"`)
+	.split(`\\"${old}\\"`).join(`\\"${newOne}\\"`)
+	.split(`\\"*${old}\\"`).join(`\\"*${newOne}\\"`);
+}
+
+
+/**
  * Tell Melt to not melt this path.
  * @param {string} path 
  */
 export function dontMeltPath(path) {
 	if (pathsToNotMelt.includes(path)) return;
 	pathsToNotMelt.push(path);
+}
+
+
+/**
+ * Add specified Godot path to the list of all possible Godot paths.
+ * @param {string} path 
+ */
+export function addPossibleGodotPath(path) {
+	path = "res://" + path;
+	if (oldGodotPaths.indexOf(path) === -1) {
+		oldGodotPaths.push(path);
+	}
+}
+
+
+/**
+ * Generate null files for non-existing file references.
+ * @param {string} rootPath 
+ */
+export async function generateNullFiles(rootPath) {
+	await writeFile(rootPath + "/_null.gd", "extends Object\n");
+	await writeFile(rootPath + "/_null.tres", "[gd_resource type=\"Resource\" format=2]\n\n[resource]\n");
+	await writeFile(rootPath + "/_null.tscn", "[gd_scene format=2]\n\n[node name=\"NullScene\" type=\"Node\"]\n");
 }
 
 
@@ -171,13 +211,19 @@ export async function meltDirectory(rootPath, labels) {
 		for (const meltedMap of mapsToMelt) {
 			const oldGodotPath = meltedMap.oldGodotPath;
 			const newGodotPath = meltedMap.newGodotPath;
-			str = str
-				.split(`'${oldGodotPath}'`).join(`'${newGodotPath}'`)
-				.split(`"${oldGodotPath}"`).join(`"${newGodotPath}"`)
-				.split(`'*${oldGodotPath}'`).join(`'*${newGodotPath}'`)
-				.split(`"*${oldGodotPath}"`).join(`"*${newGodotPath}"`)
-				.split(`\\"${oldGodotPath}\\"`).join(`\\"${newGodotPath}\\"`)
-				.split(`\\"*${oldGodotPath}\\"`).join(`\\"*${newGodotPath}\\"`);
+			str = formatAllPossibleStringTypes(str, oldGodotPath, newGodotPath);
+		}
+		for (const path of oldGodotPaths) {
+			// If there's nonexisting files (e.g., server files that somehow get referenced to the client),
+			// they will be replaced with dummy file references.
+			if (!str.includes(path)) continue;
+			if (checkFileExtension(path, "gd")) {
+				str = formatAllPossibleStringTypes(str, path, "res://_null.gd");
+			} else if (checkFileExtension(path, "tres")) {
+				str = formatAllPossibleStringTypes(str, path, "res://_null.tres");
+			} else if (checkFileExtension(path, "tscn")) {
+				str = formatAllPossibleStringTypes(str, path, "res://_null.tscn");
+			}
 		}
 		await writeFile(filePath, str);
 	}

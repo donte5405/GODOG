@@ -13,7 +13,7 @@ import { parseLocaleCsv } from "./lib/locale.csv.mjs";
 import { stripGdBlockFromFile } from "./lib/preprocessor.mjs";
 import { filesCopySelectively } from "./lib/file.copy.mjs";
 import { randomUUID } from "crypto";
-import { getFileRemaps, meltDirectory } from "./lib/melt.mjs";
+import { generateNullFiles, getFileRemaps, meltDirectory } from "./lib/melt.mjs";
 
 
 const errNoProjLocation = new Error("Project location must be specified");
@@ -172,6 +172,7 @@ if (hasServerExportOption) { // Export server version.
 		if (config.meltEnabled) {
 			console.log("Scrambling project structure...");
 			await meltDirectory(destPath, labels);
+			await generateNullFiles(destPath);
 		}
 	}
 	// Delete temp directory.
@@ -181,6 +182,7 @@ if (hasServerExportOption) { // Export server version.
 	if (config.meltEnabled) {
 		console.log("Scrambling project structure...");
 		await meltDirectory(tempLocation, labels);
+		await generateNullFiles(tempLocation);
 	}
 	// Swap the directory to the target.
 	await rm(dirOutLocation, fsOptions);
