@@ -126,19 +126,24 @@ class TrpcClient extends Node:
 		return str(_Trpc.GetServerUrl(), ":", _Trpc.ServerPort)
 
 
+	func ConnectToHostLater():
+		yield(get_tree(), "idle_frame")
+		ConnectToHost()
+
+
 	func ConnectToHost() -> void:
 		if _WsClient.connect_to_url(GetFullAddress()) != OK:
 			#GODOG_IGNORE
 			printerr("Failed to issue the connection to the address %s, retrying..." % GetFullAddress())
 			#GODOG_IGNORE
 			_Trpc._WsMpPeer = null
-			call_deferred("ConnectToHost")
+			ConnectToHostLater()
 
 
 	func _ConnectionClosed(_wasClean: bool = false) -> void:
 		_Trpc.emit_signal("ClientDisconnected")
 		if not _ServerClosed:
-			call_deferred("ConnectToHost")
+			ConnectToHostLater()
 			#GODOG_IGNORE
 			printerr("Connection closed, reconnecting...")
 			#GODOG_IGNORE
@@ -171,7 +176,7 @@ class TrpcClient extends Node:
 		_WsClient.connect("connection_established", self, "_ConnectionEstablished")
 		_WsClient.connect("server_close_request", self, "_ServerCloseRequest")
 		_WsClient.connect("data_received", self, "_DataReceivedJson" if _Trpc.UseJson else "_DataReceived")
-		call_deferred("ConnectToHost")
+		ConnectToHostLater()
 
 
 	func _process(_delta: float) -> void:
