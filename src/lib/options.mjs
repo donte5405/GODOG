@@ -29,6 +29,10 @@ export class Configuration {
 
 	/** If project melt enabled. */
 	get meltEnabled() { return this.check("scrambleGodotFiles"); }
+	/** List of importable files that can be melted. */
+	get meltImports() { return this.data["scrambleImports"] || []; }
+	/** List of non-importable files that can be melted. */
+	get meltFiles() { return this.data["scrambleFiles"] || []; }
 	/** If type casting should be bothered. */
 	get removeTypeCasting() { return this.check("removeTypeCasting"); }
 	/** If this project will ignore crucial preprocessors and skip source code leak risks altogether. */
@@ -40,6 +44,10 @@ export class Configuration {
 
 	constructor(o) {
 		if (o) this.data = o;
+		if (o["scrambleImports"] === true) {
+			// Set default for imports.
+			o["scrambleImports"] = [ "gltf", "glb", "obj", "fbx", "dae", "bmp", "tga", "png", "jpg", "webp", "gif", "svg", "wav", "ogg", "mp3" ];
+		}
 	}
 }
 

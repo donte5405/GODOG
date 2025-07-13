@@ -120,6 +120,8 @@ Then write the file in JSON fashion as usual.
 ```js
 {
     "scrambleGodotFiles": true, // This tells if GODOG will completely scramble TSCN, TRES, and GDScript file locations.
+	"scrambleImports": [ "png", "jpg", "webp", "gif", "svg", "wav", "ogg", "mp3" ], // This tells GODOG to scramble Godot-importable files.
+	"scrambleFiles": [ "json" ], // This tells GODOG to scramble non-importable files (any files that Godot will not import, such as JSON).
     "removeTypeCasting": false, // This tells GODOG to also remove type castings.
     "noExportParams": false, // This tells GODOG to strip away export parameters.
     "keepIgnoreBlocks": false, // This tells GODOG to keep all blocks in `#GODOG_IGNORE`.
@@ -129,6 +131,10 @@ Then write the file in JSON fashion as usual.
 
 - `scrambleGodotFiles`: `boolean`
 Tells GODOG to move all Godot documents (`.gd`, `.tscn`, `.tres`) into the project's root directory. This usually doesn't cause any issues as long as you don't make any attempts to access resource files using string formatting methods.
+- `scrambleImports`: `boolean` | `string[]`
+Tells GODOG to move all Godot-importable files, i.e., all files that Godot will generate the `.import`, into project's root directory. Quirks are the same as the option `scrambleGodotFiles`. If this option is set to `true`, GODOG will handle all known importable file formats.
+- `scrambleFiles`: `string[]`
+Tells GODOG to move all non-importable files, i.e., any files that Godot don't generate the `.import`, into project's root directory. Quirks are the same as the option `scrambleGodotFiles`. Noting that this option will NOT scramble file contents as it's impossible to detect strings that shouldn't be scrambled.
 - `removeTypeCasting`: `boolean`
 Tells GODOG to remove type castings from your code. This can be unpreferable since this tends to break code. During type casting, Godot will also try to convert value during parameter passings to specified type. Without type casting, values may be left as-is and become especially unsafe to deal with especially with JSON objects. If you are willing to fix your code for sake of more obscure source exports, enable this option.
 - `noExportParams`: `boolean`

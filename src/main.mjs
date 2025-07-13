@@ -19,6 +19,7 @@ import { generateNullFiles, getFileRemaps, meltDirectory } from "./lib/melt.mjs"
 const errNoProjLocation = new Error("Project location must be specified");
 const errNoSourceDir = new Error("Project source directory invalid.");
 const errNoProjDestDir = new Error("Project destination directory invalid.");
+const godotFiles = [ "godot", "tscn", "tres", "cfg", "import" ];
 
 
 if (!process.argv[2]) {
@@ -46,7 +47,7 @@ for (const fileLocation of fileList(dirLocation)) {
 	if (checkFileExtension(fileLocation, "gd")) {
 		// Check GDScripts.
 		await GDParser.parseFile(fileLocation, dirLocation);
-	} else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
+	} else if (checkFileExtension(fileLocation, godotFiles)) {
 		// Check GDResources.
 		await GDParser.parseFile(fileLocation, dirLocation, "tscn");
 	} else if (checkFileExtension(fileLocation, "csv")) {
@@ -128,7 +129,7 @@ for (const fileLocation of tempLocationFiles) {
 	if (checkFileExtension(fileLocation, "gd")) {
 		// Parse GDScript.
 		await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation));
-	} else if (checkFileExtension(fileLocation, [ "godot", "tscn", "tres", "cfg" ])) {
+	} else if (checkFileExtension(fileLocation, godotFiles)) {
 		// Parse GDResources.
 		await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation, "tscn"));
 	} else if (checkFileExtension(fileLocation, "csv")) {

@@ -1,10 +1,11 @@
 //@ts-check
 import { checkFileExtension, hasFile } from "./strings.mjs";
-import { readFile, rename, writeFile } from "fs/promises";
+import { access, constants, readFile, rename, writeFile } from "fs/promises";
 import { readdirSync, rmdirSync, statSync } from "fs";
 import { fileList } from "./file.list.mjs";
 import { Labels } from "./labels.mjs";
 import { join } from "path";
+import { getConfig } from "./options.mjs";
 
 
 const PROJECT_FILE_NAME = "project.godot";
@@ -83,6 +84,7 @@ class Remap {
 	oldPath = "";
 	myLabel = "";
 	melted = false;
+	isImportable = false;
 	/**
 	 * @param {string} oldPath 
 	 */
@@ -114,6 +116,10 @@ class Remap {
 	}
 	melt() {
 		this.melted = true;
+		return this;
+	}
+	importable() {
+		this.isImportable = true;
 		return this;
 	}
 }
@@ -174,6 +180,7 @@ export async function generateNullFiles(rootPath) {
  */
 export async function meltDirectory(rootPath, labels) {
 	const filePaths = fileList(rootPath);
+	const config = getConfig();
 	Remap.rootPath = rootPath;
 	Remap.labels = labels;
 	// Search for project root.
@@ -193,20 +200,34 @@ export async function meltDirectory(rootPath, labels) {
 		}
 		if (checkFileExtension(oldPath, [ "cfg", "godot", "csv" ]) || hasFile("default_env.tres", oldPath)) {
 			insertMap(map, mapsToChange);
-		}
-		if (!checkFileExtension(oldPath, [ "tscn", "tres", "gd" ])) {
 			continue;
 		}
-		insertMap(map, mapsToChange);
-		insertMap(map.melt(), mapsToMelt);
+		if (checkFileExtension(oldPath, [ "tscn", "tres", "gd" ])) {
+			insertMap(map, mapsToChange);
+			insertMap(map.melt(), mapsToMelt);
+			continue;
+		}
+		if (checkFileExtension(oldPath, config.meltImports)) {
+			try { await access(map.oldFilePath + ".import", constants.F_OK); } catch { continue; } // If it can't open the file, skip (as the file isn't imported).
+			insertMap(map, mapsToChange);
+			insertMap(map.importable().melt(), mapsToMelt);
+			continue;
+		}
+		if (checkFileExtension(oldPath, config.meltFiles)) {
+			insertMap(map, mapsToMelt);
+			continue;
+		}
 	}
 	// Move files.
 	for (const map of mapsToMelt) {
 		await rename(map.oldFilePath, map.newFilePath);
+		if (map.isImportable) {
+			await rename(map.oldFilePath + ".import", map.newFilePath + ".import");
+		}
 	}
 	// Alternate paths.
 	for (const map of mapsToChange) {
-		const filePath = map.filePath;
+		const filePath = map.filePath + (map.isImportable ? ".import" : "");
 		let str = await readFile(filePath, { encoding: "utf-8" });
 		for (const meltedMap of mapsToMelt) {
 			const oldGodotPath = meltedMap.oldGodotPath;
