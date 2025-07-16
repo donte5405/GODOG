@@ -265,16 +265,16 @@ func _SimulateNetworkCall(_funcArgs: Array, _toServer: bool) -> void:
 	# Convert data back and forth to simulate server-client communication, easier to detect bugs.
 	if UseJson:
 		if _toServer:
-			if IsClientTooFast(0):
+			if IsClientTooFast(1):
 				return
-			_DispatchFuncCalls(0, true, Dict.Deserialise(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer), AllowObjectDeserialiseOnServer))
+			_DispatchFuncCalls(1, true, Dict.Deserialise(Dict.Serialise(_funcArgs, false, AllowObjectDeserialiseOnServer), AllowObjectDeserialiseOnServer))
 		else:
-			_DispatchFuncCalls(0, false, Dict.Deserialise(Dict.Serialise(_funcArgs, false, true), true))
+			_DispatchFuncCalls(1, false, Dict.Deserialise(Dict.Serialise(_funcArgs, false, true), true))
 	else:
 		if _toServer:
-			if IsClientTooFast(0):
+			if IsClientTooFast(1):
 				return
-		_DispatchFuncCalls(0, _toServer, str2var(var2str(_funcArgs)))
+		_DispatchFuncCalls(1, _toServer, str2var(var2str(_funcArgs)))
 #GODOG_IGNORE
 
 
