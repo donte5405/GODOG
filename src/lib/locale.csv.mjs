@@ -113,7 +113,11 @@ export function parseLocaleCsv(str, filePath = "") {
 		try {
 			/** @type {string} */
 			const cell = formatStringQuote(token);
-			tokens[i] = (cellColIndex === 0 ? JSON.stringify(parser.parseToken(JSON.parse(cell))) : cell);
+			if (cellColIndex === 0 || cell.indexOf("res://") === 1) {
+				tokens[i] = JSON.stringify(parser.parseToken(JSON.parse(cell)));
+			} else {
+				tokens[i] = cell;
+			}
 		} catch {
 			printError("doesn't seem to be a valid translation file due to malformed string structure.", filePath);
 			return str;
