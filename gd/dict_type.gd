@@ -395,7 +395,7 @@ static func FromVector2(_v: Vector2) -> Dictionary:
 
 
 static func FromVector3(_v: Vector3) -> Dictionary:
-	return { K_TYPE: "Vector3", x = _v.x, _y = _v.y, z = _v.z, }
+	return { K_TYPE: "Vector3", x = _v.x, y = _v.y, z = _v.z, }
 
 
 # - - - - - - - - - - Serialise/Deserialise - - - - - - - - - - 
