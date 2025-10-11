@@ -340,10 +340,11 @@ _definedNodeName: String = ""
 		_process = _DefaultNodeProcessFunc
 	var _coroutine := Coroutine.new(_node, _data, _process)
 	_node.set(_coroutine.PositionPropertyName, _pos)
-	return _PlaceNode(_coroutine)
+	return AssignNode(_coroutine)
 
 
-func _PlaceNode(
+# Place node to the world.
+func AssignNode(
 _coroutine: Coroutine
 ) -> Coroutine:
 	var _node = _coroutine.TargetNode
@@ -474,7 +475,7 @@ _deltaTime: float
 				var _culledCoroutine = CulledChunks[_coord]
 				var _coroutines = _culledCoroutine.Coroutines
 				for _coroutine in _coroutines:
-					_PlaceNode(_coroutine)
+					AssignNode(_coroutine)
 				CulledChunks.erase(_coord)
 			else:
 				# Spawn nodes from file.
