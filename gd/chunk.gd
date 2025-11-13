@@ -52,13 +52,13 @@ var Coroutines := []
 var ChunkClaimers := []
 
 # List of all active chunks.
-var CurrentChunks := []
+var CurrentChunks := {}
 
 # List of all currently claimed chunks.
-var ClaimedChunks := []
+var ClaimedChunks := {}
 
 # List of all upcoming chunks that will replace current chunks.
-var UpcomingChunks := []
+var UpcomingChunks := {}
 
 # List of all culled chunks that are awaiting to be saved to disk.
 var CulledChunks := {}
@@ -139,14 +139,13 @@ class ChunkClaimer extends Reference:
 
 	# Claim a new chunk location. This runs before unclaim happens.
 	func Claim(
-	_chunkSystem,
-	_chunkIndex: int
+	_chunkSystem
 	):
 		PreviousCoordinate = CurrentCoordinate
 		CurrentCoordinate = Observing.PreviousNodeInInterestCoordinate + Coordinate
 		if !_chunkSystem.CurrentChunks.has(CurrentCoordinate):
-			_chunkSystem.ClaimedChunks.push_back(CurrentCoordinate)
-		_chunkSystem.UpcomingChunks[_chunkIndex] = CurrentCoordinate
+			_chunkSystem.ClaimedChunks[CurrentCoordinate] = true
+		_chunkSystem.UpcomingChunks[CurrentCoordinate] = true
 
 
 	func _init(
@@ -464,12 +463,9 @@ _deltaTime: float
 				break
 
 	if _chunkChanges:
-		var _chunkIndex := 0
-		UpcomingChunks.resize(ChunkClaimers.size())
 		for _chunk in ChunkClaimers:
-			_chunk.Claim(self, _chunkIndex)
-			_chunkIndex += 1
-		for _coord in ClaimedChunks:
+			_chunk.Claim(self)
+		for _coord in ClaimedChunks.keys():
 			# Spawn nodes from culled chunks.
 			if CulledChunks.has(_coord):
 				var _culledCoroutine = CulledChunks[_coord]
@@ -485,8 +481,8 @@ _deltaTime: float
 				_FileSem.post()
 
 		CurrentChunks = UpcomingChunks
-		UpcomingChunks = []
-		ClaimedChunks = []
+		UpcomingChunks = {}
+		ClaimedChunks = {}
 
 	for _ref in Coroutines:
 		if CurrentInterval > _ref.NextInterval:
