@@ -354,12 +354,23 @@ _coroutine: Coroutine
 	return _coroutine
 
 
-# Properly destroys node and cell chunk to not cull.
-func DestroyNode(
+# Properly destroys coroutine and cell chunk to not cull.
+func DestroyCoroutine(
 _coroutine: Coroutine
 ):
 	_coroutine.IsDestroyed = true
 	_coroutine.TargetNode.queue_free()
+
+
+# Properly destroys coroutine and cell chunk to not cull.
+func DestroyNode(
+_node: Node
+):
+	for _c in Coroutines:
+		if _c.TargetNode == _node:
+			DestroyCoroutine(_c)
+			return true
+	return false
 
 
 # Get node 2D position.
