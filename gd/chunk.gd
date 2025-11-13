@@ -349,8 +349,6 @@ _coroutine: Coroutine
 	var _node = _coroutine.TargetNode
 	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _coroutine ], CONNECT_ONESHOT)
 	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _coroutine ], CONNECT_ONESHOT)
-	if "Coroutine" in _node:
-		_node.Coroutine = _coroutine
 	emit_signal("OnNodeSpawned", _coroutine)
 	call_deferred("add_child", _node) # Only add node via main thread.
 	return _coroutine
