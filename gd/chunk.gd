@@ -334,7 +334,7 @@ _definedNodeName: String = ""
 	_node.name = _definedNodeName
 	var _process := _DefaultNodeProcessFunc
 	if _node.has_method("_ChunkInit"):
-		_process = _node._ChunkInit()
+		_process = _node._ChunkInit(_data)
 	if !_process:
 		_process = _DefaultNodeProcessFunc
 	var _coroutine := Coroutine.new(_node, _data, _process)
