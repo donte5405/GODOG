@@ -332,7 +332,7 @@ _definedNodeName: String = ""
 		_definedNodeName = str("_", randi())
 	var _node := _scn.instance()
 	_node.name = _definedNodeName
-	var _process := _DefaultNodeProcessFunc
+	var _process
 	if _node.has_method("_ChunkInit"):
 		_process = _node._ChunkInit(_data)
 	if !_process:
@@ -401,14 +401,11 @@ _coroutine: Coroutine
 	if _farCount == Observings.size():
 		_target.get_parent().remove_child(_target)
 		return 0.0
-	return _coroutine.ProcessFunc.call_func(_target, _coroutine.DataStorage)
+	return _coroutine.ProcessFunc.call_func()
 
 
 # Default node process function.
-func _DefaultNodeProcess(
-_target: Node,
-_data: Dictionary
-):
+func _DefaultNodeProcess():
 	return randf()
 
 
