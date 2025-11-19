@@ -1,6 +1,6 @@
 extends Node
 
-
+const DEFAULT_COROUTINE_INTERVAL = 1.0
 const OPTIMAL_NODES_PER_CHUNK = 128
 
 
@@ -406,7 +406,7 @@ _coroutine: Coroutine
 
 # Default node process function.
 func _DefaultNodeProcess():
-	return randf()
+	return randf() * DEFAULT_COROUTINE_INTERVAL
 
 
 func _OnNodeSpawned(
