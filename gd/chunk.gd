@@ -102,10 +102,10 @@ class FileQueue extends Reference:
 
 # Coroutine storage class.
 class Coroutine extends Reference:
-	var TargetNode: Node
+	var TargetNode
 	var ProcessFunc: FuncRef
 	var DataStorage: Dictionary
-	var IsDestroyed: bool = false
+	var IsDestroyed = false
 
 	var NextInterval = 0.0
 	var CulledChunkPosition: Vector2
@@ -346,6 +346,8 @@ _definedNodeName: String = ""
 func AssignNode(
 _coroutine: Coroutine
 ) -> Coroutine:
+	if _coroutine.IsDestroyed:
+		return _coroutine
 	var _node = _coroutine.TargetNode
 	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _coroutine ], CONNECT_ONESHOT)
 	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _coroutine ], CONNECT_ONESHOT)
@@ -358,8 +360,15 @@ _coroutine: Coroutine
 func DestroyCoroutine(
 _coroutine: Coroutine
 ):
+	var _node = _coroutine.TargetNode
+	var _getterName = _coroutine.PositionPropertyName
+	var _dict = {
+		name = _node.name,
+		_getterName: _node.get(_getterName),
+	}
+	_coroutine.TargetNode = _dict
 	_coroutine.IsDestroyed = true
-	_coroutine.TargetNode.queue_free()
+	_node.queue_free()
 
 
 # Properly destroys coroutine and cell chunk to not cull.
@@ -375,16 +384,16 @@ _node: Node
 
 # Get node 2D position.
 func _GetNodePosition2D(
-_node: Node2D
+_node
 ) -> Vector2:
 	return _node.position
 
 
 # Get node 3D position in 2D top-view.
 func _GetNodePosition3D(
-_node: Spatial
+_node
 ) -> Vector2:
-	var _trans := _node.position
+	var _trans = _node.position
 	return Vector2(_trans.x, _trans.z)
 
 
@@ -392,8 +401,8 @@ _node: Spatial
 func _OnNodeProcess(
 _coroutine: Coroutine
 ):
-	var _target := _coroutine.TargetNode
 	var _farCount := 0
+	var _target = _coroutine.TargetNode
 	var _targetCoordinate: Vector2 = CalculateChunkCoordinate(call(_coroutine.PositionGetterFunctionName, _target))
 	for _observing in Observings:
 		if ChunkCullDistance < _targetCoordinate.distance_to(_observing.PreviousNodeInInterestCoordinate):
@@ -432,8 +441,7 @@ func _OnNodeDespawned(
 _coroutine: Coroutine
 ):
 	emit_signal("OnNodeDespawned", _coroutine)
-	if !_coroutine.IsDestroyed:
-		_CullChunkTo(_coroutine, CulledChunks)
+	_CullChunkTo(_coroutine, CulledChunks)
 	Coroutines.erase(_coroutine)
 
 
@@ -442,12 +450,18 @@ func SaveAll():
 	var _culledChunks := {}
 	for _coroutine in Coroutines:
 		_CullChunkTo(_coroutine, _culledChunks)
+	for _chunkCoord in CulledChunks:
+		for _coroutine in CulledChunks[_chunkCoord].Coroutines:
+			_CullChunkTo(_coroutine, _culledChunks)
 	# Save all active nodes in chunk to file.
+	var _counter := 0
 	_FileMutex.lock()
 	for _key in _culledChunks:
+		_counter += 1
 		_FileQueue.push_back(FileQueue.new(_culledChunks[_key], File.WRITE))
 	_FileMutex.unlock()
-	_FileSem.post()
+	for _x in range(_counter):
+		_FileSem.post()
 
 
 func _process(
@@ -523,28 +537,25 @@ func _FileProcessThreaded():
 			continue
 
 		if _queue.OperationType == File.WRITE:
-			var _data = {}
 			var _chunk: CulledChunk = _queue.StoredData
-			var _file := _OpenFile(_chunk.CurrentCoordinate, File.READ)
-			if _file:
-				_data = _file.get_var()
-				_file.close()
-				if !(_data is Dictionary):
-					_data = {}
-			_file = _OpenFile(_chunk.CurrentCoordinate, File.WRITE)
+			var _file = _OpenFile(_chunk.CurrentCoordinate, File.WRITE)
 			var _coroutines := _chunk.Coroutines
+			var _data = {}
 			#GODOG_IGNORE
 			if _coroutines.size() > OPTIMAL_NODES_PER_CHUNK:
 				printerr(str("For optimal loading times, one chunk should never contain more than ", OPTIMAL_NODES_PER_CHUNK, " nodes, but ", _chunk.CurrentCoordinate, " has ", _coroutines.size(), " nodes."))
 			#GODOG_IGNORE
 			for _coroutine in _coroutines:
 				var _node = _coroutine.TargetNode
-				var _serial := {
-					_KFilePath: tr(_node.filename), # Always translate file paths.
-					_KNodeData: _coroutine.DataStorage,
-					_KPosition: _node.get(_coroutine.PositionPropertyName),
-				}
-				_data[_node.name] = _serial
+				if _coroutine.IsDestroyed:
+					_data.erase(_node.name)
+				else:
+					var _serial := {
+						_KFilePath: tr(_node.filename), # Always translate file paths.
+						_KNodeData: _coroutine.DataStorage,
+						_KPosition: _node.get(_coroutine.PositionPropertyName),
+					}
+					_data[_node.name] = _serial
 			_file.store_var(_data)
 			_file.close()
 			continue
