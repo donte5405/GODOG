@@ -106,6 +106,7 @@ class Coroutine extends Reference:
 	var ProcessFunc: FuncRef
 	var DataStorage: Dictionary
 	var IsDestroyed = false
+	var IsStreamed = false
 
 	var NextInterval = 0.0
 	var CulledChunkPosition: Vector2
@@ -115,10 +116,12 @@ class Coroutine extends Reference:
 
 	func _init(
 	_node: Node,
+	_isStreamed: bool,
 	_storage: Dictionary,
 	_process: FuncRef
 	):
 		TargetNode = _node
+		IsStreamed = _isStreamed
 		DataStorage = _storage
 		ProcessFunc = _process
 		if _node is Node2D:
@@ -315,6 +318,7 @@ _pos, # '_pos' can be either 'Vector2' or 'Vector3'.
 _data: Dictionary = {},
 _definedNodeName: String = ""
 ) -> Coroutine:
+	var _isNodeStreamed = (_definedNodeName != "")
 	if _definedNodeName:
 		var _node := get_node_or_null(_definedNodeName)
 		if _node:
@@ -337,7 +341,7 @@ _definedNodeName: String = ""
 		_process = _node._ChunkInit(_data)
 	if !_process:
 		_process = _DefaultNodeProcessFunc
-	var _coroutine := Coroutine.new(_node, _data, _process)
+	var _coroutine := Coroutine.new(_node, _isNodeStreamed, _data, _process)
 	_node.set(_coroutine.PositionPropertyName, _pos)
 	return AssignNode(_coroutine)
 
@@ -441,8 +445,10 @@ func _OnNodeDespawned(
 _coroutine: Coroutine
 ):
 	emit_signal("OnNodeDespawned", _coroutine)
-	_CullChunkTo(_coroutine, CulledChunks)
 	Coroutines.erase(_coroutine)
+	if _coroutine.IsDestroyed && !_coroutine.IsStreamed: # If node isn't on disk before.
+		return
+	_CullChunkTo(_coroutine, CulledChunks)
 
 
 # Save all active nodes to chunks. Should only be called manually.
@@ -546,10 +552,8 @@ func _FileProcessThreaded():
 				printerr(str("For optimal loading times, one chunk should never contain more than ", OPTIMAL_NODES_PER_CHUNK, " nodes, but ", _chunk.CurrentCoordinate, " has ", _coroutines.size(), " nodes."))
 			#GODOG_IGNORE
 			for _coroutine in _coroutines:
-				var _node = _coroutine.TargetNode
-				if _coroutine.IsDestroyed:
-					_data.erase(_node.name)
-				else:
+				if !_coroutine.IsDestroyed:
+					var _node = _coroutine.TargetNode
 					var _serial := {
 						_KFilePath: tr(_node.filename), # Always translate file paths.
 						_KNodeData: _coroutine.DataStorage,
