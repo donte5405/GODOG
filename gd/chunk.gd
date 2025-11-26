@@ -2,6 +2,7 @@ extends Node
 
 const DEFAULT_COROUTINE_INTERVAL = 1.0
 const OPTIMAL_NODES_PER_CHUNK = 128
+const CULLED_CHUNK_EXPIRY_TIME = 60000
 
 
 # Emits when node is spawned, and it doesn't need to be a brand-new node. Some spawned nodes are the ones that are restored from culled nodes.
@@ -38,9 +39,6 @@ var ChunkSizeHalf: float
 
 # Total distance of farthest spot before a chunk node will get culled.
 var ChunkCullDistance: float
-
-# Total distance of farthest spot before a chunk node will get saved to disk.
-var ChunkSaveDistance: float
 
 # List of observing nodes.
 var Observings := []
@@ -105,7 +103,6 @@ class Coroutine extends Reference:
 	var TargetNode
 	var ProcessFunc: FuncRef
 	var DataStorage: Dictionary
-	var IsDestroyed = false
 	var IsStreamed = false
 
 	var NextInterval = 0.0
@@ -163,6 +160,8 @@ class ChunkClaimer extends Reference:
 class CulledChunk extends Reference:
 	# Indicates current chunk coordinate that this object is located.
 	var CurrentCoordinate: Vector2
+	# Indicates last time this chunk has been interacted with.
+	var LastAccessTime: int
 
 	# List of all coroutines that will be culled.
 	var Coroutines := []
@@ -171,6 +170,7 @@ class CulledChunk extends Reference:
 	_pos: Vector2
 	):
 		CurrentCoordinate = _pos
+		LastAccessTime = Time.get_ticks_msec()
 
 
 # Used for observing point of interest for the chunk system to keep track on.
@@ -271,7 +271,6 @@ _dist: int
 		RemoveObserving(_node)
 		AddObserving(_node)
 	ChunkCullDistance = _fChunkDistance + Hysteresis
-	ChunkSaveDistance = ChunkCullDistance + Hysteresis
 	ChunkDistance = _dist
 
 
@@ -350,12 +349,11 @@ _definedNodeName: String = ""
 func AssignNode(
 _coroutine: Coroutine
 ) -> Coroutine:
-	if _coroutine.IsDestroyed:
+	if _coroutine.TargetNode is Dictionary:
 		return _coroutine
 	var _node = _coroutine.TargetNode
 	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _coroutine ], CONNECT_ONESHOT)
 	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _coroutine ], CONNECT_ONESHOT)
-	emit_signal("OnNodeSpawned", _coroutine)
 	call_deferred("add_child", _node) # Only add node via main thread.
 	return _coroutine
 
@@ -371,7 +369,6 @@ _coroutine: Coroutine
 		_getterName: _node.get(_getterName),
 	}
 	_coroutine.TargetNode = _dict
-	_coroutine.IsDestroyed = true
 	_node.queue_free()
 
 
@@ -412,7 +409,7 @@ _coroutine: Coroutine
 		if ChunkCullDistance < _targetCoordinate.distance_to(_observing.PreviousNodeInInterestCoordinate):
 			_farCount += 1
 	if _farCount == Observings.size():
-		_target.get_parent().remove_child(_target)
+		remove_child(_target)
 		return 0.0
 	return _coroutine.ProcessFunc.call_func()
 
@@ -426,9 +423,10 @@ func _OnNodeSpawned(
 _coroutine: Coroutine
 ):
 	Coroutines.push_back(_coroutine)
+	emit_signal("OnNodeSpawned", _coroutine.TargetNode)
 
 
-func _CullChunkTo(
+func _CullNodeTo(
 _coroutine: Coroutine,
 _culledChunks: Dictionary
 ):
@@ -437,28 +435,31 @@ _culledChunks: Dictionary
 	)
 	if !_culledChunks.has(_chunkCoord):
 		_culledChunks[_chunkCoord] = CulledChunk.new(_chunkCoord)
-	_culledChunks[_chunkCoord].Coroutines.push_back(_coroutine)
+	var _culledChunk = _culledChunks[_chunkCoord]
+	_culledChunk.LastAccessTime = Time.get_ticks_msec()
+	_culledChunk.Coroutines.push_back(_coroutine)
 
 
 # Emits when a node is despawned (via removing it from scene tree).
 func _OnNodeDespawned(
 _coroutine: Coroutine
 ):
-	emit_signal("OnNodeDespawned", _coroutine)
+	emit_signal("OnNodeDespawned", _coroutine.TargetNode)
 	Coroutines.erase(_coroutine)
-	if _coroutine.IsDestroyed && !_coroutine.IsStreamed: # If node isn't on disk before.
+	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
+		 # If node isn't on disk before, ignore culling.
 		return
-	_CullChunkTo(_coroutine, CulledChunks)
+	_CullNodeTo(_coroutine, CulledChunks)
 
 
 # Save all active nodes to chunks. Should only be called manually.
 func SaveAll():
 	var _culledChunks := {}
 	for _coroutine in Coroutines:
-		_CullChunkTo(_coroutine, _culledChunks)
+		_CullNodeTo(_coroutine, _culledChunks)
 	for _chunkCoord in CulledChunks:
 		for _coroutine in CulledChunks[_chunkCoord].Coroutines:
-			_CullChunkTo(_coroutine, _culledChunks)
+			_CullNodeTo(_coroutine, _culledChunks)
 	# Save all active nodes in chunk to file.
 	var _counter := 0
 	_FileMutex.lock()
@@ -473,42 +474,40 @@ func SaveAll():
 func _process(
 _deltaTime: float
 ):
-	var _chunkChanges := 0
+	var _currentTime = Time.get_ticks_msec()
+	for _coord in CulledChunks:
+		if _currentTime - CulledChunks[_coord].LastAccessTime > CULLED_CHUNK_EXPIRY_TIME:
+			# Save all nodes in chunk to file.
+			_FileMutex.lock()
+			_FileQueue.push_back(FileQueue.new(CulledChunks[_coord], File.WRITE))
+			CulledChunks.erase(_coord)
+			_FileMutex.unlock()
+			_FileSem.post()
+			break
+
 	for _observing in Observings:
-		_chunkChanges += _observing.IsPositionChanged(self)
-		for _key in CulledChunks:
-			if _observing.PreviousNodeInInterestCoordinate.distance_to(
-				CulledChunks[_key].CurrentCoordinate
-			) > ChunkSaveDistance:
-				# Save all nodes in chunk to file.
-				_FileMutex.lock()
-				_FileQueue.push_back(FileQueue.new(CulledChunks[_key], File.WRITE))
-				CulledChunks.erase(_key)
-				_FileMutex.unlock()
-				_FileSem.post()
-				break
+		if _observing.IsPositionChanged(self):
+			for _chunk in ChunkClaimers:
+				_chunk.Claim(self)
+			for _coord in ClaimedChunks.keys():
+				# Spawn nodes from culled chunks.
+				if CulledChunks.has(_coord):
+					var _culledCoroutine = CulledChunks[_coord]
+					var _coroutines = _culledCoroutine.Coroutines
+					for _coroutine in _coroutines:
+						AssignNode(_coroutine)
+					CulledChunks.erase(_coord)
+				else:
+					# Spawn nodes from file.
+					_FileMutex.lock()
+					_FileQueue.push_back(FileQueue.new(_coord, File.READ))
+					_FileMutex.unlock()
+					_FileSem.post()
 
-	if _chunkChanges:
-		for _chunk in ChunkClaimers:
-			_chunk.Claim(self)
-		for _coord in ClaimedChunks.keys():
-			# Spawn nodes from culled chunks.
-			if CulledChunks.has(_coord):
-				var _culledCoroutine = CulledChunks[_coord]
-				var _coroutines = _culledCoroutine.Coroutines
-				for _coroutine in _coroutines:
-					AssignNode(_coroutine)
-				CulledChunks.erase(_coord)
-			else:
-				# Spawn nodes from file.
-				_FileMutex.lock()
-				_FileQueue.push_back(FileQueue.new(_coord, File.READ))
-				_FileMutex.unlock()
-				_FileSem.post()
-
-		CurrentChunks = UpcomingChunks
-		UpcomingChunks = {}
-		ClaimedChunks = {}
+			CurrentChunks = UpcomingChunks
+			UpcomingChunks = {}
+			ClaimedChunks = {}
+			break
 
 	for _ref in Coroutines:
 		if CurrentInterval > _ref.NextInterval:
@@ -544,16 +543,24 @@ func _FileProcessThreaded():
 
 		if _queue.OperationType == File.WRITE:
 			var _chunk: CulledChunk = _queue.StoredData
+			var _read = _OpenFile(_chunk.CurrentCoordinate, File.READ)
+			var _data
+			if _read:
+				_data = _read.get_var()
+				_read.close()
+				if !(_data is Dictionary):
+					_data = {}
 			var _file = _OpenFile(_chunk.CurrentCoordinate, File.WRITE)
 			var _coroutines := _chunk.Coroutines
-			var _data = {}
 			#GODOG_IGNORE
 			if _coroutines.size() > OPTIMAL_NODES_PER_CHUNK:
 				printerr(str("For optimal loading times, one chunk should never contain more than ", OPTIMAL_NODES_PER_CHUNK, " nodes, but ", _chunk.CurrentCoordinate, " has ", _coroutines.size(), " nodes."))
 			#GODOG_IGNORE
 			for _coroutine in _coroutines:
-				if !_coroutine.IsDestroyed:
-					var _node = _coroutine.TargetNode
+				var _node = _coroutine.TargetNode
+				if _coroutine.TargetNode is Dictionary:
+					_data.erase(_node.name)
+				else:
 					var _serial := {
 						_KFilePath: tr(_node.filename), # Always translate file paths.
 						_KNodeData: _coroutine.DataStorage,
@@ -597,6 +604,7 @@ func _ready():
 
 
 func _exit_tree():
+	SaveAll()
 	_FileMutex.lock()
 	_FileIsExit = true
 	_FileMutex.unlock()
