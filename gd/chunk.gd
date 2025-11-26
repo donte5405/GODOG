@@ -519,6 +519,9 @@ func _FileProcessThreaded():
 	while true:
 		_FileSem.wait() # Wait until next posts.
 
+		if _FileIsExit:
+			break
+
 		_FileMutex.lock()
 		var _queue: FileQueue = _FileQueue.pop_front()
 		_FileMutex.unlock()
