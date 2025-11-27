@@ -1,369 +1,50 @@
 extends Node
 
-const DEFAULT_COROUTINE_INTERVAL = 1.0
-const CULLED_CHUNK_EXPIRY_TIME = 60000
-
 
 # Emits when node is spawned, and it doesn't need to be a brand-new node. Some spawned nodes are the ones that are restored from culled nodes.
-signal OnNodeSpawned(_coroutine)
+signal OnNodeSpawned(_node, _data)
 
 # Emits when node is despawned, and it doesn't need to be despawned because the node is actually destroyed. E.g., the node may get culled from chunk.
-signal OnNodeDespawned(_coroutine)
-
-
-# Specify chunk size, in square.
-var ChunkSize: float setget SetChunkSize
-
-# Chunk render distance.
-var ChunkDistance: int setget SetChunkDistance
-
-# Hysteresis before node will be freed.
-var Hysteresis: float
-
-# Chunk directory path for storing all chunk files.
-var ChunkPath: String
-
-# In case if requested path fails (e.g., the chunk isn't loaded or generated), this root path will be preferred.
-var FallbackChunkPath: String
-
-# List of all possible resources within single file.
-var ResourceIndexes: Array
-
-
-# Indicates current interval.
-var CurrentInterval := 0.0
-
-# Indicates halved chunk size.
-var ChunkSizeHalf: float
-
-# Total distance of farthest spot before a chunk node will get culled.
-var ChunkCullDistance: float
-
-# List of observing nodes.
-var Observings := []
-
-# List of coroutines.
-var Coroutines := []
-
-# List of chunk claimers.
-var ChunkClaimers := []
-
-# List of all active chunks.
-var CurrentChunks := {}
-
-# List of all currently claimed chunks.
-var ClaimedChunks := {}
-
-# List of all upcoming chunks that will replace current chunks.
-var UpcomingChunks := {}
-
-# List of all culled chunks that are awaiting to be saved to disk.
-var CulledChunks := {}
-
-# List of all baked chunks by distance, to avoid recalculation.
-var _BakedChunksByDistance := []
-
-# File variables, threaded.
-var _FileSem: Semaphore
-var _FileMutex: Mutex
-var _FileThread: Thread
-var _FileIsExit := false
-var _FileQueue: Array
-
-var _DefaultNodeProcessFunc := funcref(self, "_DefaultNodeProcess")
-
-var _KFilePath := "@a"
-var _KNodeData := "@b"
-var _KPosition := "@c"
-
-var _IsInitialized := false
-
-
-class FileQueue extends Reference:
-	signal LoadFinished(_dat)
-	var OperationType: int
-	var StoredData
-
-
-	func Finish(_dat):
-		emit_signal("LoadFinished", _dat)
-
-
-	func _init(
-	_storedData,
-	_op: int
-	):
-		StoredData = _storedData
-		OperationType = _op
-
-
-# Coroutine storage class.
-class Coroutine extends Reference:
-	var TargetNode
-	var ProcessFunc: FuncRef
-	var DataStorage: Dictionary
-	var IsStreamed = false
-
-	var NextInterval = 0.0
-	var CulledChunkPosition: Vector2
-	var PositionPropertyName: String
-	var PositionGetterFunctionName: String
-
-
-	func _init(
-	_node: Node,
-	_isStreamed: bool,
-	_storage: Dictionary,
-	_process: FuncRef
-	):
-		TargetNode = _node
-		IsStreamed = _isStreamed
-		DataStorage = _storage
-		ProcessFunc = _process
-		if _node is Node2D:
-			PositionPropertyName = "position"
-			PositionGetterFunctionName = "_GetNodePosition2D"
-		else:
-			PositionPropertyName = "position"
-			PositionGetterFunctionName = "_GetNodePosition3D"
-
-
-# Used for chunk claim/unclaim mechanism, to prevent existing chunks dupe/load & enhance performance.
-class ChunkClaimer extends Reference:
-	var PreviousCoordinate := Vector2()
-	var CurrentCoordinate := Vector2()
-	var Coordinate := Vector2()
-	var Observing
-
-
-	# Claim a new chunk location. This runs before unclaim happens.
-	func Claim(
-	_chunkSystem
-	):
-		PreviousCoordinate = CurrentCoordinate
-		CurrentCoordinate = Observing.PreviousNodeInInterestCoordinate + Coordinate
-		if !_chunkSystem.CurrentChunks.has(CurrentCoordinate):
-			_chunkSystem.ClaimedChunks[CurrentCoordinate] = true
-		_chunkSystem.UpcomingChunks[CurrentCoordinate] = true
-
-
-	func _init(
-	_coordinate: Vector2,
-	_observing
-	):
-		Coordinate = _coordinate
-		Observing = _observing
-
-
-# Used for storing culled nodes that will be saved later.
-class CulledChunk extends Reference:
-	# Indicates current chunk coordinate that this object is located.
-	var CurrentCoordinate: Vector2
-	# Indicates last time this chunk has been interacted with.
-	var LastAccessTime: int
-	# Indicates if this culled chunk is from manual saving.
-	var IsFromSaving: bool
-
-	# List of all coroutines that will be culled.
-	var Coroutines := []
-
-	func _init(
-	_pos: Vector2,
-	_isFromSaving: bool
-	):
-		CurrentCoordinate = _pos
-		IsFromSaving = _isFromSaving
-		LastAccessTime = Time.get_ticks_msec()
-
-
-# Used for observing point of interest for the chunk system to keep track on.
-class Observing extends Reference:
-	# Node (either 2D or 3D) that will be observed as point of interest to deploy chunks.
-	var NodeInInterest setget SetNodeInInterest
-
-	# Tells previous coordinate that the node in interest was in.
-	var PreviousNodeInInterestCoordinate := Vector2(0.1, 0.1)
-
-	# Function reference that's used for the node position grabbing.
-	var CurrentNodeInInterestPositionGetter
-
-
-	func SetNodeInInterest(
-	_node: Node
-	):
-		NodeInInterest = _node
-		CurrentNodeInInterestPositionGetter = funcref(self, "GetNodeInInterestPosition3D" if _node is Spatial else "GetNodeInInterestPosition2D")
-
-
-	func GetNodeInInterestPosition3D():
-		var _trans: Vector3 = NodeInInterest.position
-		return Vector2(_trans.x, _trans.z)
-
-
-	func GetNodeInInterestPosition2D():
-		return NodeInInterest.position
-
-
-	func IsPositionChanged(
-	_chunkSystem
-	):
-		var _coordinate = _chunkSystem.CalculateChunkCoordinate(
-			CurrentNodeInInterestPositionGetter.call_func()
-		)
-		if PreviousNodeInInterestCoordinate == _coordinate:
-			return 0
-		PreviousNodeInInterestCoordinate = _coordinate
-		return 1
-
-
-	func _init(
-	_node: Node
-	):
-		SetNodeInInterest(_node)
-
-
-func _OpenFile(
-_name,
-_op: int
-) -> File:
-	_name = str(_name).md5_text() + ".bin"
-	var _path: String = ChunkPath + "/" + _name
-	var _file := File.new()
-	if [ File.READ_WRITE, File.READ ].has(_op):
-		if !_file.file_exists(_path):
-			_path = FallbackChunkPath + "/" + _name
-	if _file.open(_path, _op) != OK:
-		return null
-	return _file
-
-
-# Calculate chunk's coordinate based on specified position.
-func CalculateChunkCoordinate(
-_pos: Vector2
-) -> Vector2:
-	return Vector2(
-		(_pos.x + ChunkSizeHalf) / ChunkSize,
-		(_pos.y + ChunkSizeHalf) / ChunkSize
-	).floor()
-
-
-# Set current chunk's size.
-func SetChunkSize(
-_size: float
-):
-	ChunkSize = _size
-	ChunkSizeHalf = _size / 2.0
-
-
-# Set chunk distance.
-func SetChunkDistance(
-_dist: int
-):
-	var _range := range(-_dist, _dist)
-	var _fChunkDistance := float(_dist)
-	_BakedChunksByDistance.clear()
-	for _y in _range:
-		for _x in _range:
-			var _vec := Vector2(_x, _y)
-			if Vector2().distance_to(_vec) <= _fChunkDistance:
-				_BakedChunksByDistance.push_back(_vec)
-	var _observingNodes := []
-	for _observing in Observings:
-		_observingNodes.push_back(_observing.NodeInInterest)
-	for _node in _observingNodes:
-		RemoveObserving(_node)
-		AddObserving(_node)
-	ChunkCullDistance = _fChunkDistance + Hysteresis
-	ChunkDistance = _dist
+signal OnNodeDespawned(_node, _data)
+
+var _AwaitingSpawnNodesMutex: Mutex
+var _AwaitingSpawnNodes := []
+
+var _CachedResourcesMutex: Mutex
+var _CachedResources = {}
+var _ChunkThread: Thread
+var _ChunkMutex: Mutex
+var _ChunkSem: Semaphore
+var _ChunkQueue := []
+var _IsExit := false
+
+var _BakedCoords := []
+var _Observings := []
+
+var _ChunkCullDistance = 0
+var _ChunkPath := ""
+var _ChunkSizeHalfPx := 0.0
+var _Coroutines := []
+var _CurrentInterval := 0.0
+
+export var _ChunkSizePx := 1024.0
+export var _ChunkDistance := 16
+export var _ChunkHysteresis := 2
+export var _ChunkDefaultPath := "res://saves/default"
+export var _DefaultCoroutineInterval := 1.0
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
 func AddObserving(
 _node: Node
 ):
-	var _obs := Observing.new(_node)
-	Observings.push_back(_obs)
-	for _chunk in _BakedChunksByDistance:
-		ChunkClaimers.push_back(ChunkClaimer.new(_chunk, _obs))
-
-
-# Remove an observing node.
-func RemoveObserving(
-_node: Node
-):
-	var _i := 0
-	var _observing
-	while _i < Observings.size():
-		var _o = Observings[_i]
-		if _o.NodeInInterest == _node:
-			Observings.remove(_i)
-			_observing = _o
-			break
-		_i += 1
-	if !_observing:
-		#GODOG_IGNORE
-		printerr("Invalid observing node: " + _node.name)
-		#GODOG_IGNORE
-		return
-	_i = 0
-	while _i < ChunkClaimers.size():
-		if ChunkClaimers[_i].Observing == _observing:
-			ChunkClaimers.remove(_i)
-			continue
-		_i += 1
-
-
-# Spawn a chunk-managed node. It can be despawned by simply removing the node from its tree.
-func SpawnNode(
-_scn: PackedScene,
-_pos, # '_pos' can be either 'Vector2' or 'Vector3'.
-_data: Dictionary = {},
-_definedNodeName: String = ""
-) -> Coroutine:
-	var _isNodeStreamed = (_definedNodeName != "")
-	if _definedNodeName:
-		var _node := get_node_or_null(_definedNodeName)
-		if _node:
-			#GODOG_IGNORE
-			printerr("Node " + _definedNodeName + " already exists.")
-			#GODOG_IGNORE
-			for _coroutine in Coroutines:
-				if _coroutine.TargetNode == _node:
-					return _coroutine
-			#GODOG_IGNORE
-			printerr("However, it seems to be a non-chunk node.")
-			#GODOG_IGNORE
-			return null
-	else:
-		_definedNodeName = str("_", randi())
-	var _node := _scn.instance()
-	_node.name = _definedNodeName
-	var _process
-	if _node.has_method("_ChunkInit"):
-		_process = _node._ChunkInit(_data)
-	if !_process:
-		_process = _DefaultNodeProcessFunc
-	var _coroutine := Coroutine.new(_node, _isNodeStreamed, _data, _process)
-	_node.set(_coroutine.PositionPropertyName, _pos)
-	return AssignNode(_coroutine)
-
-
-# Place node to the world.
-func AssignNode(
-_coroutine: Coroutine
-) -> Coroutine:
-	if _coroutine.TargetNode is Dictionary:
-		return _coroutine
-	var _node = _coroutine.TargetNode
-	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _coroutine ], CONNECT_ONESHOT)
-	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _coroutine ], CONNECT_ONESHOT)
-	call_deferred("add_child", _node) # Only add node via main thread.
-	return _coroutine
+	var _obs = _CreateObserving(_node)
+	_Observings.push_back(_obs)
 
 
 # Properly destroys coroutine and cell chunk to not cull.
 func DestroyCoroutine(
-_coroutine: Coroutine
+_coroutine: Dictionary
 ):
 	var _node = _coroutine.TargetNode
 	var _getterName = _coroutine.PositionPropertyName
@@ -379,11 +60,145 @@ _coroutine: Coroutine
 func DestroyNode(
 _node: Node
 ):
-	for _c in Coroutines:
+	for _c in _Coroutines:
 		if _c.TargetNode == _node:
 			DestroyCoroutine(_c)
 			return true
 	return false
+
+
+# Initialise chunk system.
+func Initialize(
+_path: String = ""
+):
+	if is_processing():
+		assert(false, tr("_ChunkIsAlreadyInitialised"))
+		return
+	_ChunkCullDistance = _ChunkDistance + _ChunkHysteresis
+	_ChunkSizeHalfPx = _ChunkSizePx / 2.0
+	_ChunkPath = _path if _path else _ChunkDefaultPath
+
+	# Calculate chunk range for fast baking
+	var _range := range(-_ChunkDistance, _ChunkDistance)
+	var _fChunkDistance := float(_ChunkDistance)
+	for _y in _range:
+		for _x in _range:
+			var _vec := Vector2(_x, _y)
+			if Vector2().distance_to(_vec) <= _fChunkDistance:
+				_BakedCoords.push_back(_vec)
+
+	set_process(true)
+	_ChunkThread.start(self, "__Chunk_ThreadLoop")
+
+
+# Save all loaded nodes.
+func SaveAll():
+	for _coroutine in _Coroutines:
+		_CullNode(_coroutine, true)
+
+
+# Spawn a chunk-managed node. It can be despawned by simply removing the node from its tree.
+func SpawnNode(
+_path: String,
+_pos, # '_pos' can be either 'Vector2' or 'Vector3'.
+_data: Dictionary = {},
+_name: String = ""
+):
+	_AwaitingSpawnNodesMutex.lock()
+	_AwaitingSpawnNodes.push_back([
+		_path, _pos, _data, _name
+	])
+	_AwaitingSpawnNodesMutex.unlock()
+
+
+func _SpawnNode(
+_path: String,
+_pos, # '_pos' can be either 'Vector2' or 'Vector3'.
+_data: Dictionary = {},
+_name: String = ""
+):
+	if !_CachedResources.has(_path):
+		_CachedResources[_path] = load(_path)
+	var _isStreamed = (_name != "")
+	_CachedResourcesMutex.lock()
+	var _node = _CachedResources[_path].instance()
+	_CachedResourcesMutex.unlock()
+	if !_isStreamed:
+		_name = str("_", randi())
+	_node.name = _name
+	var _posGetterName
+	var _posPropName
+	if _node is Node2D:
+		_posGetterName = "_GetNodePosition2D"
+		_posPropName = "position"
+	elif _node is Spatial:
+		_posGetterName = "_GetNodePosition3D"
+		_posPropName = "position"
+	_node.set(_posPropName, _pos)
+	var _coroutine = _CreateCoroutine(_path, _node, _data, _isStreamed, _posGetterName, _posPropName)
+	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _node, _data, _coroutine, ], CONNECT_ONESHOT)
+	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _node, _data, _coroutine ], CONNECT_ONESHOT)
+	call_deferred("add_child", _node) # Only add node via main thread.
+
+
+# Default process function to be called for coroutines.
+func _DefaultNodeProcess(
+_interval: float
+):
+	return randf() * _DefaultCoroutineInterval
+
+
+# Calculate chunk's coordinate based on specified position.
+func _CalculateChunkCoordinate(
+_size: float,
+_half: float,
+_pos: Vector2
+) -> Vector2:
+	return Vector2(
+		(_pos.x + _half) / _size,
+		(_pos.y + _half) / _size
+	).floor()
+
+
+# Create coroutine data structure.
+func _CreateCoroutine(
+_scnPath: String,
+_node: Node,
+_storage: Dictionary,
+_isStreamed: bool,
+_posGetterName: String,
+_posPropName: String
+):
+	return {
+		NextInterval = 0.0,
+		IsStreamed = _isStreamed,
+
+		FilePath = _scnPath,
+		TargetNode = _node,
+		DataStorage = _storage,
+		ProcessFunc = null,
+		PositionGetterName = _posGetterName,
+		PositionPropertyName = _posPropName,
+	}
+
+
+# Create observing node data structure.
+func _CreateObserving(
+_node: Node
+):
+	return {
+		NodeInInterest = _node,
+		PositionGetter = "_GetNodePosition3D" if _node is Spatial else "_GetNodePosition2D",
+		CurrentCoordinate = Vector2(0.000001, 0.000001),
+	}
+
+
+# Cull node to chunk thread.
+func _CullNode(
+_coroutine: Dictionary,
+_isSaving: bool
+):
+	__Chunk_PushCall(File.WRITE, [ _coroutine.duplicate(true), _isSaving ])
 
 
 # Get node 2D position.
@@ -401,215 +216,232 @@ _node
 	return Vector2(_trans.x, _trans.z)
 
 
+# Check if observing's chunk coordinate is changed.
+func _IsObservingCoordinateChanged(
+_observing: Dictionary
+) -> bool:
+	var _coordinate = _CalculateChunkCoordinate(
+		_ChunkSizePx, _ChunkSizeHalfPx, call(_observing.PositionGetter, _observing.NodeInInterest)
+	)
+	if _observing.CurrentCoordinate == _coordinate:
+		return false
+	_observing.CurrentCoordinate = _coordinate
+	return true
+
+
+# This will be called when node gets culled.
+func _OnNodeDespawned(
+_node: Node,
+_data: Dictionary,
+_coroutine: Dictionary
+):
+	emit_signal("OnNodeDespawned", _node, _data)
+	_Coroutines.erase(_coroutine)
+	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
+		return
+	_CullNode(_coroutine, false)
+
+
 # Emits every specified second for each chunk node.
 func _OnNodeProcess(
-_coroutine: Coroutine
+_coroutine: Dictionary
 ):
 	var _farCount := 0
 	var _target = _coroutine.TargetNode
-	var _targetCoordinate: Vector2 = CalculateChunkCoordinate(call(_coroutine.PositionGetterFunctionName, _target))
-	for _observing in Observings:
-		if ChunkCullDistance < _targetCoordinate.distance_to(_observing.PreviousNodeInInterestCoordinate):
+	var _targetCoordinate: Vector2 = _CalculateChunkCoordinate(_ChunkSizePx, _ChunkSizeHalfPx, call(_coroutine.PositionGetterName, _target))
+	for _observing in _Observings:
+		if _ChunkCullDistance < _targetCoordinate.distance_to(_observing.CurrentCoordinate):
 			_farCount += 1
-	if _farCount == Observings.size():
+	if _farCount == _Observings.size():
 		remove_child(_target)
 		return 0.0
-	return _coroutine.ProcessFunc.call_func()
+	return _coroutine.ProcessFunc.call_func(_CurrentInterval)
 
 
-# Default node process function.
-func _DefaultNodeProcess():
-	return randf() * DEFAULT_COROUTINE_INTERVAL
-
-
+# When node gets spawned, this will be called.
 func _OnNodeSpawned(
-_coroutine: Coroutine
+_node: Node,
+_data: Dictionary,
+_coroutine: Dictionary
 ):
-	Coroutines.push_back(_coroutine)
-	emit_signal("OnNodeSpawned", _coroutine.TargetNode)
+	_Coroutines.push_back(_coroutine)
+	if _node.has_method("_ChunkReady"):
+		_coroutine.ProcessFunc = _node._ChunkReady(_data)
+	if !_coroutine.ProcessFunc:
+		_coroutine.ProcessFunc = funcref(self, "_DefaultNodeProcess")
+	emit_signal("OnNodeSpawned", _node, _data)
 
 
-func _CullNodeTo(
-_coroutine: Coroutine,
-_culledChunks: Dictionary,
-_isFromSaving: bool = false
+# Perform file open operation.
+func _OpenFile(
+_name,
+_op: int
+) -> File:
+	_name = str(_name).md5_text() + ".bin"
+	var _path: String = _ChunkPath + "/" + _name
+	var _file := File.new()
+	if [ File.READ_WRITE, File.READ ].has(_op):
+		if !_file.file_exists(_path):
+			_path = _ChunkDefaultPath + "/" + _name
+	if _file.open(_path, _op) != OK:
+		return null
+	return _file
+
+
+# Submit RPC call to chunk thread.
+func __Chunk_PushCall(
+_opType: int,
+_data = null
 ):
-	var _chunkCoord := CalculateChunkCoordinate(
-		call(_coroutine.PositionGetterFunctionName, _coroutine.TargetNode)
-	)
-	if !_culledChunks.has(_chunkCoord):
-		_culledChunks[_chunkCoord] = CulledChunk.new(_chunkCoord, _isFromSaving)
-	var _culledChunk = _culledChunks[_chunkCoord]
-	_culledChunk.LastAccessTime = Time.get_ticks_msec()
-	_culledChunk.Coroutines.push_back(_coroutine)
+	_ChunkMutex.lock()
+	_ChunkQueue.push_back([ _opType, _data ])
+	_ChunkMutex.unlock()
+	_ChunkSem.post()
 
 
-# Emits when a node is despawned (via removing it from scene tree).
-func _OnNodeDespawned(
-_coroutine: Coroutine
-):
-	emit_signal("OnNodeDespawned", _coroutine.TargetNode)
-	Coroutines.erase(_coroutine)
-	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
-		# If node isn't on disk before, ignore culling.
-		return
-	_CullNodeTo(_coroutine, CulledChunks)
+func __Chunk_ThreadLoop():
+	var _kOp = 0
+	var _kData = 1
+	var _kCoroutine = 0
+	var _kIsFromSaving = 1
 
+	var _kFilePath := 0
+	var _kNodeData := 1
+	var _kPosition := 2
 
-# Save all active nodes to chunks. Should only be called manually.
-func SaveAll():
-	var _culledChunks := {}
-	for _coroutine in Coroutines:
-		_CullNodeTo(_coroutine, _culledChunks, true)
-	for _chunkCoord in CulledChunks:
-		for _coroutine in CulledChunks[_chunkCoord].Coroutines:
-			_CullNodeTo(_coroutine, _culledChunks, true)
-	# Save all active nodes in chunk to file.
-	for _key in _culledChunks:
-		_FileMutex.lock()
-		_FileQueue.push_back(FileQueue.new(_culledChunks[_key], File.WRITE))
-		_FileMutex.unlock()
-		_FileSem.post()
+	# Full copy variables for memory safety
+	var _path = _ChunkPath
+	var _size = _ChunkSizePx
+	var _half = _ChunkSizeHalfPx
+	var _dist = _ChunkDistance
+	var _hyst = _ChunkHysteresis
 
+	var _bakedCoords = _BakedCoords
+	var _isResourceCached = {}
+	var _loadedNodes = {}
+	_BakedCoords = []
 
-func _process(
-_deltaTime: float
-):
-	var _currentTime = Time.get_ticks_msec()
-	for _coord in CulledChunks:
-		if _currentTime - CulledChunks[_coord].LastAccessTime > CULLED_CHUNK_EXPIRY_TIME:
-			# Save all nodes in chunk to file.
-			_FileMutex.lock()
-			_FileQueue.push_back(FileQueue.new(CulledChunks[_coord], File.WRITE))
-			CulledChunks.erase(_coord)
-			_FileMutex.unlock()
-			_FileSem.post()
-			break
-
-	for _observing in Observings:
-		if _observing.IsPositionChanged(self):
-			for _chunk in ChunkClaimers:
-				_chunk.Claim(self)
-			for _coord in ClaimedChunks.keys():
-				# Spawn nodes from culled chunks.
-				if CulledChunks.has(_coord):
-					var _culledCoroutine = CulledChunks[_coord]
-					var _coroutines = _culledCoroutine.Coroutines
-					for _coroutine in _coroutines:
-						AssignNode(_coroutine)
-					CulledChunks.erase(_coord)
-				else:
-					# Spawn nodes from file.
-					_FileMutex.lock()
-					_FileQueue.push_back(FileQueue.new(_coord, File.READ))
-					_FileMutex.unlock()
-					_FileSem.post()
-
-			CurrentChunks = UpcomingChunks
-			UpcomingChunks = {}
-			ClaimedChunks = {}
-			break
-
-	for _ref in Coroutines:
-		if CurrentInterval > _ref.NextInterval:
-			_ref.NextInterval += _OnNodeProcess(_ref)
-	CurrentInterval += _deltaTime
-
-
-func _FileProcessThreaded():
 	while true:
-		_FileSem.wait() # Wait until next posts.
+		# Wait for main thread
+		_ChunkSem.wait()
 
-		_FileMutex.lock()
-		if _FileIsExit:
-			_FileMutex.unlock()
+		# Pop ONLY one command
+		_ChunkMutex.lock()
+		if _IsExit:
+			_ChunkMutex.unlock()
 			break
-		var _queue: FileQueue = _FileQueue.pop_front()
-		_FileMutex.unlock()
+		var _cmd = _ChunkQueue.pop_front()
+		_ChunkMutex.unlock()
 
-		if _queue.OperationType == File.READ:
-			var _file := _OpenFile(_queue.StoredData, File.READ)
-			if !_file:
-				# printerr("Cannot load file '" + str(_queue.StoredData) + "'!")
-				continue
-			var _data = _file.get_var()
-			if !(_data is Dictionary):
-				continue
-			for _nodeName in _data:
-				var _obj: Dictionary = _data[_nodeName]
-				SpawnNode(
-					load(tr(_obj[_KFilePath])),
-					_obj[_KPosition],
-					_obj[_KNodeData],
-					_nodeName
-				)
+		if _cmd[_kOp] == File.READ:
+			# Calculate chunks to be loaded
+			var _observePoint = _cmd[_kData]
+			var _chunkCoords = _bakedCoords.duplicate()
+			var _ci = 0
+			var _csize = _chunkCoords.size()
+			while _ci < _csize:
+				_chunkCoords[_ci] += _observePoint
+				_ci += 1
+			
+			# Spawn all nodes from chunk file
+			for _chunkCoord in _chunkCoords:
+				var _file := _OpenFile(_chunkCoord, File.READ)
+				if !_file:
+					continue
+				var _data = _file.get_var()
+				if !(_data is Dictionary):
+					continue
+				for _nodeName in _data:
+					if _loadedNodes.has(_nodeName):
+						continue
+					var _obj: Dictionary = _data[_nodeName]
+					var _resPath = tr(_obj[_kFilePath])
+					if !_isResourceCached.has(_resPath):
+						_CachedResourcesMutex.lock()
+						_CachedResources[_resPath] = load(_resPath)
+						_CachedResourcesMutex.unlock()
+						_isResourceCached[_resPath] = true
+					SpawnNode(
+						_resPath,
+						_obj[_kPosition],
+						_obj[_kNodeData],
+						_nodeName
+					)
+					_loadedNodes[_nodeName] = true
 			continue
-
-		if _queue.OperationType == File.WRITE:
-			var _chunk: CulledChunk = _queue.StoredData
-			var _destroyAfter = !_chunk.IsFromSaving
-			var _read = _OpenFile(_chunk.CurrentCoordinate, File.READ)
+		
+		if _cmd[_kOp] == File.WRITE:
 			var _data = {}
+			var _args = _cmd[_kData]
+			var _coroutine = _args[_kCoroutine]
+			var _destroyAfter = !_args[_kIsFromSaving]
+
+			# Calculate node position & coord
+			var _node = _coroutine.TargetNode
+			var _nodeName = _node.name
+			var _position = call(_coroutine.PositionGetterName, _node)
+			var _coordinate = _CalculateChunkCoordinate(_size, _half, _position)
+
+			# Read previously existing data
+			var _read = _OpenFile(_coordinate, File.READ)
 			if _read:
 				var _stream = _read.get_var()
 				_read.close()
 				if _stream is Dictionary:
 					_data = _stream
-			var _file = _OpenFile(_chunk.CurrentCoordinate, File.WRITE)
-			var _coroutines := _chunk.Coroutines
-			for _coroutine in _coroutines:
-				var _node = _coroutine.TargetNode
-				if _coroutine.TargetNode is Dictionary:
-					_data.erase(_node.name)
-				else:
-					var _serial := {
-						_KFilePath: tr(_node.filename), # Always translate file paths.
-						_KNodeData: _coroutine.DataStorage,
-						_KPosition: _node.get(_coroutine.PositionPropertyName),
-					}
-					if _destroyAfter:
-						_node.queue_free()
-					_data[_node.name] = _serial
+
+			# Write data to disk
+			if _node is Dictionary:
+				_data.erase(_nodeName)
+				_loadedNodes.erase(_nodeName)
+			else:
+				var _serial := {
+					_kFilePath: tr(_coroutine.FilePath), # Always translate file paths.
+					_kNodeData: _coroutine.DataStorage,
+					_kPosition: _node.get(_coroutine.PositionPropertyName),
+				}
+				if _destroyAfter:
+					_node.call_deferred("queue_free")
+					_loadedNodes.erase(_nodeName)
+				_data[_nodeName] = _serial
+			var _file = _OpenFile(_coordinate, File.WRITE)
 			_file.store_var(_data)
 			_file.close()
 			continue
 
 
-# Initialise chunk system.
-func Initialize(
-_size: float = 16.0,
-_dist: int = 16.0,
-_hyst: float = 1.0,
-_path: String = "res://world",
-_fallbackPath: String = "res://world"
-):
-	if _IsInitialized:
-		#GODG_IGNORE
-		# Never allows repeat initialisation.
-		printerr("This chunk node '" + name + "' is already initialised! Consider destroy and create a new chunk node instead.")
-		#GODOG_IGNORE
-		return
-	_IsInitialized = true
-	Hysteresis = _hyst
-	ChunkPath = _path
-	FallbackChunkPath = _fallbackPath
-	SetChunkSize(_size)
-	SetChunkDistance(_dist)
-	set_process(true)
-
-
 func _ready():
+	_AwaitingSpawnNodesMutex = Mutex.new()
+	_CachedResourcesMutex = Mutex.new()
+	_ChunkThread = Thread.new()
+	_ChunkMutex = Mutex.new()
+	_ChunkSem = Semaphore.new()
 	set_process(false)
-	_FileSem = Semaphore.new()
-	_FileMutex = Mutex.new()
-	_FileThread = Thread.new()
-	_FileThread.start(self, "_FileProcessThreaded")
+
+
+func _process(
+_deltaTime: float
+):
+	_AwaitingSpawnNodesMutex.lock()
+	for _x in range(8):
+		var _awaitingSpawnNode = _AwaitingSpawnNodes.pop_front()
+		if _awaitingSpawnNode:
+			call_deferred("_SpawnNode", _awaitingSpawnNode[0], _awaitingSpawnNode[1], _awaitingSpawnNode[2], _awaitingSpawnNode[3])
+	_AwaitingSpawnNodesMutex.unlock()
+
+	for _observing in _Observings:
+		if _IsObservingCoordinateChanged(_observing):
+			__Chunk_PushCall(File.READ, _observing.CurrentCoordinate)
+	for _ref in _Coroutines:
+		if _CurrentInterval > _ref.NextInterval:
+			_ref.NextInterval += _OnNodeProcess(_ref)
+	_CurrentInterval += _deltaTime
 
 
 func _exit_tree():
 	SaveAll()
-	_FileMutex.lock()
-	_FileIsExit = true
-	_FileMutex.unlock()
-	_FileSem.post()
-	_FileThread.wait_to_finish()
+	_ChunkMutex.lock()
+	_IsExit = true
+	_ChunkMutex.unlock()
+	_ChunkSem.post()
+	_ChunkThread.wait_to_finish()
