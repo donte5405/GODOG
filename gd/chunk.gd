@@ -32,6 +32,7 @@ export var _ChunkDistance := 16
 export var _ChunkHysteresis := 2
 export var _ChunkDefaultPath := "res://saves/default"
 export var _DefaultCoroutineInterval := 1.0
+export var _NodeSpawnFrequency := 8
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
@@ -109,36 +110,6 @@ _name: String = ""
 		_path, _pos, _data, _name
 	])
 	_AwaitingSpawnNodesMutex.unlock()
-
-
-func _SpawnNode(
-_path: String,
-_pos, # '_pos' can be either 'Vector2' or 'Vector3'.
-_data: Dictionary = {},
-_name: String = ""
-):
-	if !_CachedResources.has(_path):
-		_CachedResources[_path] = load(_path)
-	var _isStreamed = (_name != "")
-	_CachedResourcesMutex.lock()
-	var _node = _CachedResources[_path].instance()
-	_CachedResourcesMutex.unlock()
-	if !_isStreamed:
-		_name = str("_", randi())
-	_node.name = _name
-	var _posGetterName
-	var _posPropName
-	if _node is Node2D:
-		_posGetterName = "_GetNodePosition2D"
-		_posPropName = "position"
-	elif _node is Spatial:
-		_posGetterName = "_GetNodePosition3D"
-		_posPropName = "position"
-	_node.set(_posPropName, _pos)
-	var _coroutine = _CreateCoroutine(_path, _node, _data, _isStreamed, _posGetterName, _posPropName)
-	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _node, _data, _coroutine, ], CONNECT_ONESHOT)
-	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _node, _data, _coroutine ], CONNECT_ONESHOT)
-	call_deferred("add_child", _node) # Only add node via main thread.
 
 
 # Default process function to be called for coroutines.
@@ -288,6 +259,36 @@ _op: int
 	return _file
 
 
+func _SpawnNode(
+_path: String,
+_pos, # '_pos' can be either 'Vector2' or 'Vector3'.
+_data: Dictionary = {},
+_name: String = ""
+):
+	if !_CachedResources.has(_path):
+		_CachedResources[_path] = load(_path)
+	var _isStreamed = (_name != "")
+	_CachedResourcesMutex.lock()
+	var _node = _CachedResources[_path].instance()
+	_CachedResourcesMutex.unlock()
+	if !_isStreamed:
+		_name = str("_", randi())
+	_node.name = _name
+	var _posGetterName
+	var _posPropName
+	if _node is Node2D:
+		_posGetterName = "_GetNodePosition2D"
+		_posPropName = "position"
+	elif _node is Spatial:
+		_posGetterName = "_GetNodePosition3D"
+		_posPropName = "position"
+	_node.set(_posPropName, _pos)
+	var _coroutine = _CreateCoroutine(_path, _node, _data, _isStreamed, _posGetterName, _posPropName)
+	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _node, _data, _coroutine, ], CONNECT_ONESHOT)
+	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _node, _data, _coroutine ], CONNECT_ONESHOT)
+	call_deferred("add_child", _node) # Only add node via main thread.
+
+
 # Submit RPC call to chunk thread.
 func __Chunk_PushCall(
 _opType: int,
@@ -423,10 +424,10 @@ func _process(
 _deltaTime: float
 ):
 	_AwaitingSpawnNodesMutex.lock()
-	for _x in range(8):
-		var _awaitingSpawnNode = _AwaitingSpawnNodes.pop_front()
-		if _awaitingSpawnNode:
-			call_deferred("_SpawnNode", _awaitingSpawnNode[0], _awaitingSpawnNode[1], _awaitingSpawnNode[2], _awaitingSpawnNode[3])
+	for _x in range(_NodeSpawnFrequency):
+		var _args = _AwaitingSpawnNodes.pop_front()
+		if _args:
+			call_deferred("_SpawnNode", _args[0], _args[1], _args[2], _args[3])
 	_AwaitingSpawnNodesMutex.unlock()
 
 	for _observing in _Observings:
