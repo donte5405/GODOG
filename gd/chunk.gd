@@ -28,11 +28,11 @@ var _Coroutines := []
 var _CurrentInterval := 0.0
 
 export var _ChunkSizePx := 1024.0
-export var _ChunkDistance := 16
+export var _ChunkDistance := 4
 export var _ChunkHysteresis := 2
 export var _ChunkDefaultPath := "res://saves/default"
 export var _DefaultCoroutineInterval := 1.0
-export var _NodeSpawnFrequency := 8
+export var _NodeSpawnFrequency := 16
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
