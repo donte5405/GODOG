@@ -32,7 +32,7 @@ export var _ChunkDistance := 4
 export var _ChunkHysteresis := 2
 export var _ChunkDefaultPath := "res://saves/default"
 export var _DefaultCoroutineInterval := 1.0
-export var _NodeSpawnFrequency := 16
+export var _NodeSpawnFrequency := 8
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
@@ -90,6 +90,8 @@ _path: String = ""
 
 	set_process(true)
 	_ChunkThread.start(self, "__Chunk_ThreadLoop")
+	connect("child_entered_tree", self, "_OnNodeSpawned")
+	connect("child_exiting_tree", self, "_OnNodeDespawned")
 
 
 # Save all loaded nodes.
@@ -202,10 +204,10 @@ _observing: Dictionary
 
 # This will be called when node gets culled.
 func _OnNodeDespawned(
-_node: Node,
-_data: Dictionary,
-_coroutine: Dictionary
+_node: Node
 ):
+	var _coroutine = _node.get_meta("_ChunkCoroutine")
+	var _data = _node.get_meta("_ChunkDataStorage")
 	emit_signal("OnNodeDespawned", _node, _data)
 	_Coroutines.erase(_coroutine)
 	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
@@ -231,10 +233,10 @@ _coroutine: Dictionary
 
 # When node gets spawned, this will be called.
 func _OnNodeSpawned(
-_node: Node,
-_data: Dictionary,
-_coroutine: Dictionary
+_node: Node
 ):
+	var _coroutine = _node.get_meta("_ChunkCoroutine")
+	var _data = _node.get_meta("_ChunkDataStorage")
 	_Coroutines.push_back(_coroutine)
 	if _node.has_method("_ChunkReady"):
 		_coroutine.ProcessFunc = _node._ChunkReady(_data)
@@ -284,9 +286,9 @@ _name: String = ""
 		_posPropName = "position"
 	_node.set(_posPropName, _pos)
 	var _coroutine = _CreateCoroutine(_path, _node, _data, _isStreamed, _posGetterName, _posPropName)
-	_node.connect("tree_entered", self, "_OnNodeSpawned", [ _node, _data, _coroutine, ], CONNECT_ONESHOT)
-	_node.connect("tree_exited", self, "_OnNodeDespawned", [ _node, _data, _coroutine ], CONNECT_ONESHOT)
-	call_deferred("add_child", _node) # Only add node via main thread.
+	_node.set_meta("_ChunkCoroutine", _coroutine)
+	_node.set_meta("_ChunkDataStorage", _data)
+	add_child(_node)
 
 
 # Submit RPC call to chunk thread.
