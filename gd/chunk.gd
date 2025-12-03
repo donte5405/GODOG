@@ -24,8 +24,10 @@ var _Observings := []
 var _ChunkCullDistance = 0
 var _ChunkPath := ""
 var _ChunkSizeHalfPx := 0.0
-var _Coroutines := []
+var _Coroutines := {}
 var _CurrentInterval := 0.0
+
+var _Queries = {}
 
 export var _ChunkSizePx := 1024.0
 export var _ChunkDistance := 4
@@ -61,11 +63,24 @@ _coroutine: Dictionary
 func DestroyNode(
 _node: Node
 ):
-	for _c in _Coroutines:
+	for _c in _Coroutines.values():
 		if _c.TargetNode == _node:
 			DestroyCoroutine(_c)
 			return true
 	return false
+
+
+# Build query for nodes.
+func Query(
+_keys: Array
+):
+	var _psKeys = PoolStringArray(_keys)
+	_psKeys.sort()
+	if !_Queries.has(_psKeys):
+		_Queries[_psKeys] = []
+		for _coroutine in _Coroutines.values():
+			_UpdateQuery(_coroutine)
+	return _Queries[_psKeys]
 
 
 # Initialise chunk system.
@@ -96,7 +111,7 @@ _path: String = ""
 
 # Save all loaded nodes.
 func SaveAll():
-	for _coroutine in _Coroutines:
+	for _coroutine in _Coroutines.values():
 		_CullNode(_coroutine, true)
 
 
@@ -118,7 +133,7 @@ _name: String = ""
 func _DefaultNodeProcess(
 _interval: float
 ):
-	return randf() * _DefaultCoroutineInterval
+	return _DefaultCoroutineInterval
 
 
 # Calculate chunk's coordinate based on specified position.
@@ -143,7 +158,7 @@ _posGetterName: String,
 _posPropName: String
 ):
 	return {
-		NextInterval = 0.0,
+		NextInterval = _CurrentInterval + randf(),
 		IsStreamed = _isStreamed,
 
 		FilePath = _scnPath,
@@ -206,10 +221,13 @@ _observing: Dictionary
 func _OnNodeDespawned(
 _node: Node
 ):
-	var _coroutine = _node.get_meta("_ChunkCoroutine")
-	var _data = _node.get_meta("_ChunkDataStorage")
+	var _name = _node.name
+	var _coroutine = _Coroutines[_name]
+	var _data = _coroutine.DataStorage
 	emit_signal("OnNodeDespawned", _node, _data)
-	_Coroutines.erase(_coroutine)
+	_Coroutines.erase(_node.name)
+	for _nodes in _Queries.values():
+		_nodes.erase(_name)
 	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
 		return
 	_CullNode(_coroutine, false)
@@ -228,20 +246,38 @@ _coroutine: Dictionary
 	if _farCount == _Observings.size():
 		remove_child(_target)
 		return 0.0
-	return _coroutine.ProcessFunc.call_func(_CurrentInterval)
+	var _storage = _coroutine.DataStorage
+	var _beforeProcess = _storage.keys().hash()
+	var _nextInterval = _coroutine.ProcessFunc.call_func(_CurrentInterval)
+	var _afterProcess = _storage.keys().hash()
+	if _beforeProcess != _afterProcess:
+		var _name = _target.name
+		for _query in _Queries:
+			var _exists = true
+			for _key in _query:
+				if _key in _storage:
+					continue
+				_exists = false
+				break
+			var _nodes = _Queries[_query]
+			if _exists && !_nodes.has(_name):
+				_nodes.push_back(_name)
+			else:
+				_nodes.erase(_name)
+	return _nextInterval
 
 
 # When node gets spawned, this will be called.
 func _OnNodeSpawned(
 _node: Node
 ):
-	var _coroutine = _node.get_meta("_ChunkCoroutine")
-	var _data = _node.get_meta("_ChunkDataStorage")
-	_Coroutines.push_back(_coroutine)
+	var _coroutine = _Coroutines[_node.name]
+	var _data = _coroutine.DataStorage
 	if _node.has_method("_ChunkReady"):
 		_coroutine.ProcessFunc = _node._ChunkReady(_data)
 	if !_coroutine.ProcessFunc:
 		_coroutine.ProcessFunc = funcref(self, "_DefaultNodeProcess")
+	_UpdateQuery(_coroutine)
 	emit_signal("OnNodeSpawned", _node, _data)
 
 
@@ -286,9 +322,27 @@ _name: String = ""
 		_posPropName = "position"
 	_node.set(_posPropName, _pos)
 	var _coroutine = _CreateCoroutine(_path, _node, _data, _isStreamed, _posGetterName, _posPropName)
-	_node.set_meta("_ChunkCoroutine", _coroutine)
-	_node.set_meta("_ChunkDataStorage", _data)
+	_Coroutines[_node.name] = _coroutine
 	add_child(_node)
+
+
+func _UpdateQuery(
+_coroutine: Dictionary
+):
+	var _storage = _coroutine.DataStorage
+	var _name = _coroutine.TargetNode.name
+	for _query in _Queries:
+		var _exists = true
+		for _key in _query:
+			if _key in _storage:
+				continue
+			_exists = false
+			break
+		var _nodes = _Queries[_query]
+		if _exists && !_nodes.has(_name):
+			_nodes.push_back(_name)
+		else:
+			_nodes.erase(_name)
 
 
 # Submit RPC call to chunk thread.
@@ -435,7 +489,7 @@ _deltaTime: float
 	for _observing in _Observings:
 		if _IsObservingCoordinateChanged(_observing):
 			__Chunk_PushCall(File.READ, _observing.CurrentCoordinate)
-	for _ref in _Coroutines:
+	for _ref in _Coroutines.values():
 		if _CurrentInterval > _ref.NextInterval:
 			_ref.NextInterval += _OnNodeProcess(_ref)
 	_CurrentInterval += _deltaTime
