@@ -174,6 +174,7 @@ _posPropName: String
 		FilePath = _scnPath,
 		TargetNode = _node,
 		DataStorage = _storage,
+		DataStorageHash = _storage.hash(),
 		PositionGetterName = _posGetterName,
 		PositionPropertyName = _posPropName,
 	}
@@ -269,11 +270,15 @@ _coroutine: Dictionary
 		return 0.0
 	var _storage = _coroutine.DataStorage
 	var _beforeProcess = _storage.keys().hash()
+	if _beforeProcess != _coroutine.DataStorageHash:
+		_coroutine.DataStorageHash = _beforeProcess
+		_UpdateQuery(_coroutine)
 	for _key in _coroutine.BoundQueries.keys():
 		for _func in _QueryBinds[_key]:
 			_func.call_func(_target, _storage, _CurrentInterval)
 	var _afterProcess = _storage.keys().hash()
 	if _beforeProcess != _afterProcess:
+		_coroutine.DataStorageHash = _afterProcess
 		_UpdateQuery(_coroutine)
 	return _coroutine.Interval
 
@@ -380,7 +385,7 @@ _coroutine: Dictionary
 			if _key in _storage:
 				_exists = false
 				break
-		if _exists && !_bound.has(_query):
+		if _exists:
 			_bound[_query] = true
 		else:
 			_bound.erase(_query)
