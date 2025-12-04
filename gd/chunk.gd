@@ -271,7 +271,7 @@ _coroutine: Dictionary
 	var _beforeProcess = _storage.keys().hash()
 	for _key in _coroutine.BoundQueries.keys():
 		for _func in _QueryBinds[_key]:
-			_func.call_func(_target, _storage)
+			_func.call_func(_target, _storage, _CurrentInterval)
 	var _afterProcess = _storage.keys().hash()
 	if _beforeProcess != _afterProcess:
 		_UpdateQuery(_coroutine)
