@@ -251,19 +251,7 @@ _coroutine: Dictionary
 	var _nextInterval = _coroutine.ProcessFunc.call_func(_CurrentInterval)
 	var _afterProcess = _storage.keys().hash()
 	if _beforeProcess != _afterProcess:
-		var _name = _target.name
-		for _query in _Queries:
-			var _exists = true
-			for _key in _query:
-				if _key in _storage:
-					continue
-				_exists = false
-				break
-			var _nodes = _Queries[_query]
-			if _exists && !_nodes.has(_name):
-				_nodes.push_back(_name)
-			else:
-				_nodes.erase(_name)
+		_UpdateQuery(_coroutine)
 	return _nextInterval
 
 
