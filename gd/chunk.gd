@@ -27,7 +27,8 @@ var _ChunkSizeHalfPx := 0.0
 var _Coroutines := {}
 var _CurrentInterval := 0.0
 
-var _Queries = {}
+var _QueryBinds = {}
+var _QueryExclusions = {}
 
 export var _ChunkSizePx := 1024.0
 export var _ChunkDistance := 4
@@ -43,6 +44,24 @@ _node: Node
 ):
 	var _obs = _CreateObserving(_node)
 	_Observings.push_back(_obs)
+
+
+# Attach function binding to specified query. Functions will be called with parameters `node: Node` and `data: Dictionary`.
+func BindQuery(
+_functions,
+_keys: Array,
+_exclusions = [],
+_forceUpdate = false
+):
+	if _functions is FuncRef:
+		_functions = [ _functions ]
+	var _existingFuncs = _QueryBinds[
+		_Query(_keys, _exclusions, _forceUpdate)
+	]
+	for _func in _functions:
+		_existingFuncs.push_back(_func)
+	for _coroutine in _Coroutines.values():
+		_UpdateQuery(_coroutine)
 
 
 # Properly destroys coroutine and cell chunk to not cull.
@@ -68,19 +87,6 @@ _node: Node
 			DestroyCoroutine(_c)
 			return true
 	return false
-
-
-# Build query for nodes.
-func Query(
-_keys: Array
-):
-	var _psKeys = PoolStringArray(_keys)
-	_psKeys.sort()
-	if !_Queries.has(_psKeys):
-		_Queries[_psKeys] = []
-		for _coroutine in _Coroutines.values():
-			_UpdateQuery(_coroutine)
-	return _Queries[_psKeys]
 
 
 # Initialise chunk system.
@@ -160,11 +166,12 @@ _posPropName: String
 	return {
 		NextInterval = _CurrentInterval + randf(),
 		IsStreamed = _isStreamed,
+		BoundQueries = {},
+		Interval = 1.0,
 
 		FilePath = _scnPath,
 		TargetNode = _node,
 		DataStorage = _storage,
-		ProcessFunc = null,
 		PositionGetterName = _posGetterName,
 		PositionPropertyName = _posPropName,
 	}
@@ -226,8 +233,6 @@ _node: Node
 	var _data = _coroutine.DataStorage
 	emit_signal("OnNodeDespawned", _node, _data)
 	_Coroutines.erase(_node.name)
-	for _nodes in _Queries.values():
-		_nodes.erase(_name)
 	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
 		return
 	_CullNode(_coroutine, false)
@@ -248,11 +253,13 @@ _coroutine: Dictionary
 		return 0.0
 	var _storage = _coroutine.DataStorage
 	var _beforeProcess = _storage.keys().hash()
-	var _nextInterval = _coroutine.ProcessFunc.call_func(_CurrentInterval)
+	for _key in _coroutine.BoundQueries.keys():
+		for _func in _QueryBinds[_key]:
+			_func.call_func(_target, _storage)
 	var _afterProcess = _storage.keys().hash()
 	if _beforeProcess != _afterProcess:
 		_UpdateQuery(_coroutine)
-	return _nextInterval
+	return _coroutine.Interval
 
 
 # When node gets spawned, this will be called.
@@ -262,9 +269,10 @@ _node: Node
 	var _coroutine = _Coroutines[_node.name]
 	var _data = _coroutine.DataStorage
 	if _node.has_method("_ChunkReady"):
-		_coroutine.ProcessFunc = _node._ChunkReady(_data)
-	if !_coroutine.ProcessFunc:
-		_coroutine.ProcessFunc = funcref(self, "_DefaultNodeProcess")
+		var _interval = _node._ChunkReady(_data)
+		if _interval is float:
+			_coroutine.Interval = _interval
+			_coroutine.NextInterval += _interval
 	_UpdateQuery(_coroutine)
 	emit_signal("OnNodeSpawned", _node, _data)
 
@@ -283,6 +291,23 @@ _op: int
 	if _file.open(_path, _op) != OK:
 		return null
 	return _file
+
+
+# Build query.
+func _Query(
+_keys: Array,
+_exclusions = [],
+_forceUpdate = false
+):
+	_keys.sort()
+	var _psKeys = PoolStringArray(_keys)
+	if !_QueryBinds.has(_psKeys) || _forceUpdate:
+		_exclusions.sort()
+		_QueryBinds[_psKeys] = []
+		_QueryExclusions[_psKeys] = PoolStringArray(_exclusions)
+		for _coroutine in _Coroutines.values():
+			_UpdateQuery(_coroutine)
+	return _psKeys
 
 
 func _SpawnNode(
@@ -318,19 +343,22 @@ func _UpdateQuery(
 _coroutine: Dictionary
 ):
 	var _storage = _coroutine.DataStorage
-	var _name = _coroutine.TargetNode.name
-	for _query in _Queries:
+	var _bound = _coroutine.BoundQueries
+	for _query in _QueryBinds:
 		var _exists = true
 		for _key in _query:
 			if _key in _storage:
 				continue
 			_exists = false
 			break
-		var _nodes = _Queries[_query]
-		if _exists && !_nodes.has(_name):
-			_nodes.push_back(_name)
+		for _key in _QueryExclusions[_query]:
+			if _key in _storage:
+				_exists = false
+				break
+		if _exists && !_bound.has(_query):
+			_bound[_query] = true
 		else:
-			_nodes.erase(_name)
+			_bound.erase(_query)
 
 
 # Submit RPC call to chunk thread.
