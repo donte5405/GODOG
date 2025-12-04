@@ -65,26 +65,12 @@ _forceUpdate = false
 
 
 # Properly destroys coroutine and cell chunk to not cull.
-func DestroyCoroutine(
-_coroutine: Dictionary
-):
-	var _node = _coroutine.TargetNode
-	var _getterName = _coroutine.PositionPropertyName
-	var _dict = {
-		name = _node.name,
-		_getterName: _node.get(_getterName),
-	}
-	_coroutine.TargetNode = _dict
-	_node.queue_free()
-
-
-# Properly destroys coroutine and cell chunk to not cull.
 func DestroyNode(
 _node: Node
 ):
 	for _c in _Coroutines.values():
 		if _c.TargetNode == _node:
-			DestroyCoroutine(_c)
+			_DestroyCoroutine(_c)
 			return true
 	return false
 
@@ -119,7 +105,8 @@ _path: String = ""
 func ProcessInstantly(
 _node: Node
 ):
-	_Coroutines[_node.name].NextInterval = _CurrentInterval - randf()
+	var _coroutine = _Coroutines[_node.name]
+	_coroutine.NextInterval = _CurrentInterval - randf() * _coroutine.Interval
 
 
 # Set process interval for this node, can be as low as 0.1.
@@ -209,6 +196,20 @@ _coroutine: Dictionary,
 _isSaving: bool
 ):
 	__Chunk_PushCall(File.WRITE, [ _coroutine.duplicate(true), _isSaving ])
+
+
+# Destroy specified coroutine along with its assigned node.
+func _DestroyCoroutine(
+_coroutine: Dictionary
+):
+	var _node = _coroutine.TargetNode
+	var _getterName = _coroutine.PositionPropertyName
+	var _dict = {
+		name = _node.name,
+		_getterName: _node.get(_getterName),
+	}
+	_coroutine.TargetNode = _dict
+	_node.queue_free()
 
 
 # Get node 2D position.
