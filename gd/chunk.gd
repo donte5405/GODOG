@@ -332,14 +332,23 @@ _pos, # '_pos' can be either 'Vector2' or 'Vector3'.
 _data: Dictionary = {},
 _name: String = ""
 ):
+	var _isStreamed = (_name != "")
+	if _isStreamed:
+		if _Coroutines.has(_name):
+			# FIX: For some reason, thread still spills out loaded nodes, and this code block must exist. DO NOT REMOVE.
+			#GODOG_IGNORE
+			printerr(_name + " already exists.")
+			#GODOG_IGNORE
+			return
+	else:
+		_name = str("_", randi())
+		while _Coroutines.has(_name):
+			_name = str("_", randi())
 	if !_CachedResources.has(_path):
 		_CachedResources[_path] = load(_path)
-	var _isStreamed = (_name != "")
 	_CachedResourcesMutex.lock()
 	var _node = _CachedResources[_path].instance()
 	_CachedResourcesMutex.unlock()
-	if !_isStreamed:
-		_name = str("_", randi())
 	_node.name = _name
 	var _posGetterName
 	var _posPropName
@@ -351,7 +360,7 @@ _name: String = ""
 		_posPropName = "position"
 	_node.set(_posPropName, _pos)
 	var _coroutine = _CreateCoroutine(_path, _node, _data, _isStreamed, _posGetterName, _posPropName)
-	_Coroutines[_node.name] = _coroutine
+	_Coroutines[_name] = _coroutine
 	add_child(_node)
 
 
