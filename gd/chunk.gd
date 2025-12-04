@@ -35,7 +35,7 @@ export var _ChunkDistance := 4
 export var _ChunkHysteresis := 2
 export var _ChunkDefaultPath := "res://saves/default"
 export var _DefaultCoroutineInterval := 1.0
-export var _NodeSpawnFrequency := 8
+export var _NodeSpawnFrequency := 2
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
@@ -113,6 +113,21 @@ _path: String = ""
 	_ChunkThread.start(self, "__Chunk_ThreadLoop")
 	connect("child_entered_tree", self, "_OnNodeSpawned")
 	connect("child_exiting_tree", self, "_OnNodeDespawned")
+
+
+# Signals this node to be processed instantly.
+func ProcessInstantly(
+_node: Node
+):
+	_Coroutines[_node.name].NextInterval = _CurrentInterval - randf()
+
+
+# Set process interval for this node, can be as low as 0.1.
+func SetInterval(
+_node: Node,
+_itv = 1.0
+):
+	_Coroutines[_node.name].Interval = min(_itv, 0.1)
 
 
 # Save all loaded nodes.
