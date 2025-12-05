@@ -536,7 +536,7 @@ _deltaTime: float
 		if _IsObservingCoordinateChanged(_observing):
 			__Chunk_PushCall(File.READ, _observing.CurrentCoordinate)
 	for _ref in _Coroutines.values():
-		if _CurrentInterval > _ref.NextInterval:
+		while _CurrentInterval > _ref.NextInterval:
 			_ref.NextInterval += _OnNodeProcess(_ref)
 	_CurrentInterval += _deltaTime
 
