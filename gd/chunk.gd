@@ -38,24 +38,6 @@ export var _DefaultCoroutineInterval := 1.0
 export var _NodeSpawnFrequency := 2
 
 
-class DictDefaultSetter extends Reference:
-	var Dict: Dictionary
-
-
-	func _init(
-	_data: Dictionary
-	):
-		Dict = _data
-	
-
-	func SetDefault(
-	_key,
-	_value
-	):
-		if !Dict.has(_key):
-			Dict[_key] = _value
-
-
 # Add a node to be observed and has chunk algorithm tasks assigned.
 func AddObserving(
 _node: Node
@@ -306,11 +288,17 @@ _node: Node
 ):
 	var _coroutine = _Coroutines[_node.name]
 	var _data = _coroutine.DataStorage
+	if "_ChunkDefaultData" in _node:
+		for _res in _node._ChunkDefaultData:
+			var _defaults = _res.Defaults
+			for _key in _defaults:
+				if !_data.has(_key):
+					_data[_key] = _defaults[_key]
+	if "_ChunkNodeInterval" in _node:
+		_coroutine.Interval = _node._ChunkNodeInterval
 	if _node.has_method("_ChunkReady"):
-		_node._ChunkReady(DictDefaultSetter.new(_data))
-	if _node.has_method("_DefaultInterval"):
-		_coroutine.Interval = _node._DefaultInterval()
-		_coroutine.NextInterval += _coroutine.Interval
+		_node._ChunkReady(self, _data)
+	_coroutine.NextInterval += _coroutine.Interval
 	_UpdateQuery(_coroutine)
 	emit_signal("OnNodeSpawned", _node, _data)
 
