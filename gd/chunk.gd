@@ -292,7 +292,7 @@ _node: Node
 		var _interval = _node._ChunkReady(_data)
 	if _node.has_method("_DefaultInterval"):
 		_coroutine.Interval = _node._DefaultInterval()
-		_coroutine.NextInterval = _coroutine.Interval
+		_coroutine.NextInterval += _coroutine.Interval
 	_UpdateQuery(_coroutine)
 	emit_signal("OnNodeSpawned", _node, _data)
 
