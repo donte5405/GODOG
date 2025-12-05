@@ -267,7 +267,7 @@ _coroutine: Dictionary
 			_farCount += 1
 	if _farCount == _Observings.size():
 		remove_child(_target)
-		return 0.0
+		return
 	var _storage = _coroutine.DataStorage
 	var _beforeProcess = _storage.keys().hash()
 	if _beforeProcess != _coroutine.DataStorageHash:
@@ -280,7 +280,6 @@ _coroutine: Dictionary
 	if _beforeProcess != _afterProcess:
 		_coroutine.DataStorageHash = _afterProcess
 		_UpdateQuery(_coroutine)
-	return _coroutine.Interval
 
 
 # When node gets spawned, this will be called.
@@ -537,7 +536,8 @@ _deltaTime: float
 			__Chunk_PushCall(File.READ, _observing.CurrentCoordinate)
 	for _ref in _Coroutines.values():
 		while _CurrentInterval > _ref.NextInterval:
-			_ref.NextInterval += _OnNodeProcess(_ref)
+			_ref.NextInterval += _ref.Interval
+			_OnNodeProcess(_ref)
 	_CurrentInterval += _deltaTime
 
 
