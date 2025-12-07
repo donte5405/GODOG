@@ -27,6 +27,8 @@ var _ChunkSizeHalfPx := 0.0
 var _Coroutines := {}
 var _CurrentInterval := 0.0
 
+var _QueryBinds_OnDespawn = {}
+var _QueryBinds_OnSpawn = {}
 var _QueryBinds = {}
 var _QueryExclusions = {}
 
@@ -46,6 +48,26 @@ _node: Node
 	_Observings.push_back(_obs)
 
 
+# Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
+func BindQueryOnDespawn(
+_functions,
+_keys: Array,
+_exclusions = [],
+_forceUpdate = false
+):
+	_BindQuery(_QueryBinds_OnDespawn, _functions, _keys, _exclusions, _forceUpdate)
+
+
+# Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
+func BindQueryOnSpawn(
+_functions,
+_keys: Array,
+_exclusions = [],
+_forceUpdate = false
+):
+	_BindQuery(_QueryBinds_OnSpawn, _functions, _keys, _exclusions, _forceUpdate)
+
+
 # Attach function binding to specified query. Functions will be called with parameters `node: Node` and `data: Dictionary`.
 func BindQuery(
 _functions,
@@ -53,15 +75,7 @@ _keys: Array,
 _exclusions = [],
 _forceUpdate = false
 ):
-	if _functions is FuncRef:
-		_functions = [ _functions ]
-	var _existingFuncs = _QueryBinds[
-		_Query(_keys, _exclusions, _forceUpdate)
-	]
-	for _func in _functions:
-		_existingFuncs.push_back(_func)
-	for _coroutine in _Coroutines.values():
-		_UpdateQuery(_coroutine)
+	_BindQuery(_QueryBinds, _functions, _keys, _exclusions, _forceUpdate)
 
 
 # Properly destroys coroutine and cell chunk to not cull.
@@ -137,11 +151,22 @@ _name: String = ""
 	_AwaitingSpawnNodesMutex.unlock()
 
 
-# Default process function to be called for coroutines.
-func _DefaultNodeProcess(
-_interval: float
+func _BindQuery(
+_to: Dictionary,
+_functions,
+_keys: Array,
+_exclusions: Array,
+_forceUpdate: bool
 ):
-	return _DefaultCoroutineInterval
+	if _functions is FuncRef:
+		_functions = [ _functions ]
+	var _existingFuncs = _to[
+		_Query(_keys, _exclusions, _forceUpdate)
+	]
+	for _func in _functions:
+		_existingFuncs.push_back(_func)
+	for _coroutine in _Coroutines.values():
+		_UpdateQuery(_coroutine)
 
 
 # Calculate chunk's coordinate based on specified position.
@@ -199,6 +224,13 @@ _isSaving: bool
 	__Chunk_PushCall(File.WRITE, [ _coroutine.duplicate(true), _isSaving ])
 
 
+# Default process function to be called for coroutines.
+func _DefaultNodeProcess(
+_interval: float
+):
+	return _DefaultCoroutineInterval
+
+
 # Destroy specified coroutine along with its assigned node.
 func _DestroyCoroutine(
 _coroutine: Dictionary
@@ -248,6 +280,9 @@ _node: Node
 	var _name = _node.name
 	var _coroutine = _Coroutines[_name]
 	var _data = _coroutine.DataStorage
+	for _key in _coroutine.BoundQueries.keys():
+		for _func in _QueryBinds_OnDespawn[_key]:
+			_func.call_func(_node, _data, _CurrentInterval)
 	emit_signal("OnNodeDespawned", _node, _data)
 	_Coroutines.erase(_node.name)
 	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
@@ -300,6 +335,9 @@ _node: Node
 		_node._ChunkReady(self, _data)
 	_coroutine.NextInterval += _coroutine.Interval
 	_UpdateQuery(_coroutine)
+	for _key in _coroutine.BoundQueries.keys():
+		for _func in _QueryBinds_OnSpawn[_key]:
+			_func.call_func(_node, _data, _CurrentInterval)
 	emit_signal("OnNodeSpawned", _node, _data)
 
 
@@ -330,6 +368,8 @@ _forceUpdate = false
 	if !_QueryBinds.has(_psKeys) || _forceUpdate:
 		_exclusions.sort()
 		_QueryBinds[_psKeys] = []
+		_QueryBinds_OnSpawn[_psKeys] = []
+		_QueryBinds_OnDespawn[_psKeys] = []
 		_QueryExclusions[_psKeys] = PoolStringArray(_exclusions)
 		for _coroutine in _Coroutines.values():
 			_UpdateQuery(_coroutine)
