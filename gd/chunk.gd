@@ -1,6 +1,8 @@
 extends Node
 
 
+const THREAD_RES_LOAD = 2398420123
+
 # Emits when node is spawned, and it doesn't need to be a brand-new node. Some spawned nodes are the ones that are restored from culled nodes.
 signal OnNodeSpawned(_node, _data)
 
@@ -10,8 +12,6 @@ signal OnNodeDespawned(_node, _data)
 var _AwaitingSpawnNodesMutex: Mutex
 var _AwaitingSpawnNodes := []
 
-var _CachedResourcesMutex: Mutex
-var _CachedResources = {}
 var _ChunkThread: Thread
 var _ChunkMutex: Mutex
 var _ChunkSem: Semaphore
@@ -38,6 +38,24 @@ export var _ChunkHysteresis := 2
 export var _ChunkDefaultPath := "res://saves/default"
 export var _DefaultCoroutineInterval := 1.0
 export var _NodeSpawnFrequency := 2
+
+
+class ThreadedFileRequester extends Object:
+	signal Fulfilled(_data)
+	var ResourcePath = ""
+	func _init(
+	_path
+	):
+		ResourcePath = _path
+	func Fulfill(
+	_data
+	):
+		call_deferred("_Fulfill", _data)
+	func _Fulfill(
+	_data
+	):
+		emit_signal("Fulfilled", _data)
+		call_deferred("free")
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
@@ -115,7 +133,7 @@ _path: String = ""
 	connect("child_exiting_tree", self, "_OnNodeDespawned")
 
 
-# Signals this node to be processed instantly.
+# Signals this node to be processed nearly instantly (often after current frame within this frame).
 func ProcessInstantly(
 _node: Node
 ):
@@ -376,11 +394,19 @@ _forceUpdate = false
 	return _psKeys
 
 
+func _RequestResource(
+_resPath: String
+):
+	var _req = ThreadedFileRequester.new(_resPath)
+	__Chunk_PushCall(THREAD_RES_LOAD, _req)
+	return _req
+
+
 func _SpawnNode(
 _path: String,
 _pos, # '_pos' can be either 'Vector2' or 'Vector3'.
-_data: Dictionary = {},
-_name: String = ""
+_data: Dictionary,
+_name: String
 ):
 	var _isStreamed = (_name != "")
 	if _isStreamed:
@@ -394,11 +420,7 @@ _name: String = ""
 		_name = str("_", randi())
 		while _Coroutines.has(_name):
 			_name = str("_", randi())
-	if !_CachedResources.has(_path):
-		_CachedResources[_path] = load(_path)
-	_CachedResourcesMutex.lock()
-	var _node = _CachedResources[_path].instance()
-	_CachedResourcesMutex.unlock()
+	var _node = yield(_RequestResource(_path), "Fulfilled").instance()
 	_node.name = _name
 	var _posGetterName
 	var _posPropName
@@ -452,6 +474,7 @@ func __Chunk_ThreadLoop():
 	var _kData = 1
 	var _kCoroutine = 0
 	var _kIsFromSaving = 1
+	var _kFileRequestObj = 1
 
 	var _kFilePath := 0
 	var _kNodeData := 1
@@ -465,7 +488,7 @@ func __Chunk_ThreadLoop():
 	var _hyst = _ChunkHysteresis
 
 	var _bakedCoords = _BakedCoords
-	var _isResourceCached = {}
+	var _cachedResources = {}
 	var _loadedNodes = {}
 	_BakedCoords = []
 
@@ -480,6 +503,13 @@ func __Chunk_ThreadLoop():
 			break
 		var _cmd = _ChunkQueue.pop_front()
 		_ChunkMutex.unlock()
+
+		if _cmd[_kOp] == THREAD_RES_LOAD:
+			var _req = _cmd[_kFileRequestObj]
+			var _resPath = _req.ResourcePath
+			if !_cachedResources.has(_resPath):
+				_cachedResources[_resPath] = load(_resPath)
+			_req.Fulfill(_cachedResources[_resPath])
 
 		if _cmd[_kOp] == File.READ:
 			# Calculate chunks to be loaded
@@ -503,14 +533,8 @@ func __Chunk_ThreadLoop():
 					if _loadedNodes.has(_nodeName):
 						continue
 					var _obj: Dictionary = _data[_nodeName]
-					var _resPath = tr(_obj[_kFilePath])
-					if !_isResourceCached.has(_resPath):
-						_CachedResourcesMutex.lock()
-						_CachedResources[_resPath] = load(_resPath)
-						_CachedResourcesMutex.unlock()
-						_isResourceCached[_resPath] = true
 					SpawnNode(
-						_resPath,
+						tr(_obj[_kFilePath]),
 						_obj[_kPosition],
 						_obj[_kNodeData],
 						_nodeName
@@ -560,7 +584,6 @@ func __Chunk_ThreadLoop():
 
 func _ready():
 	_AwaitingSpawnNodesMutex = Mutex.new()
-	_CachedResourcesMutex = Mutex.new()
 	_ChunkThread = Thread.new()
 	_ChunkMutex = Mutex.new()
 	_ChunkSem = Semaphore.new()
@@ -574,7 +597,7 @@ _deltaTime: float
 	for _x in range(_NodeSpawnFrequency):
 		var _args = _AwaitingSpawnNodes.pop_front()
 		if _args:
-			call_deferred("_SpawnNode", _args[0], _args[1], _args[2], _args[3])
+			_SpawnNode(_args[0], _args[1], _args[2], _args[3])
 	_AwaitingSpawnNodesMutex.unlock()
 
 	for _observing in _Observings:
