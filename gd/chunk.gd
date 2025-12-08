@@ -212,7 +212,7 @@ _posPropName: String
 		NextInterval = _CurrentInterval + randf(),
 		IsStreamed = _isStreamed,
 		BoundQueries = {},
-		Interval = 1.0,
+		Interval = _DefaultCoroutineInterval,
 
 		FilePath = _scnPath,
 		TargetNode = _node,
