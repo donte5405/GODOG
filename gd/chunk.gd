@@ -510,6 +510,7 @@ func __Chunk_ThreadLoop():
 			if !_cachedResources.has(_resPath):
 				_cachedResources[_resPath] = load(_resPath)
 			_req.Fulfill(_cachedResources[_resPath])
+			continue
 
 		if _cmd[_kOp] == File.READ:
 			# Calculate chunks to be loaded
