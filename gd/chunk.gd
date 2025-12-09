@@ -40,24 +40,6 @@ export var _DefaultCoroutineInterval := 1.0
 export var _NodeSpawnFrequency := 2
 
 
-class ThreadedFileRequester extends Object:
-	signal Fulfilled(_data)
-	var ResourcePath = ""
-	func _init(
-	_path
-	):
-		ResourcePath = _path
-	func Fulfill(
-	_data
-	):
-		call_deferred("_Fulfill", _data)
-	func _Fulfill(
-	_data
-	):
-		emit_signal("Fulfilled", _data)
-		call_deferred("free")
-
-
 # Add a node to be observed and has chunk algorithm tasks assigned.
 func AddObserving(
 _node: Node
@@ -162,11 +144,7 @@ _pos, # '_pos' can be either 'Vector2' or 'Vector3'.
 _data: Dictionary = {},
 _name: String = ""
 ):
-	_AwaitingSpawnNodesMutex.lock()
-	_AwaitingSpawnNodes.push_back([
-		_path, _pos, _data, _name
-	])
-	_AwaitingSpawnNodesMutex.unlock()
+	__Chunk_PushCall(THREAD_RES_LOAD, [ _path, _pos, _data, _name ])
 
 
 func _BindQuery(
@@ -394,15 +372,8 @@ _forceUpdate = false
 	return _psKeys
 
 
-func _RequestResource(
-_resPath: String
-):
-	var _req = ThreadedFileRequester.new(_resPath)
-	__Chunk_PushCall(THREAD_RES_LOAD, _req)
-	return _req
-
-
 func _SpawnNode(
+_scn: PackedScene,
 _path: String,
 _pos, # '_pos' can be either 'Vector2' or 'Vector3'.
 _data: Dictionary,
@@ -420,7 +391,7 @@ _name: String
 		_name = str("_", randi())
 		while _Coroutines.has(_name):
 			_name = str("_", randi())
-	var _node = yield(_RequestResource(_path), "Fulfilled").instance()
+	var _node = _scn.instance()
 	_node.name = _name
 	var _posGetterName
 	var _posPropName
@@ -463,7 +434,7 @@ func __Chunk_PushCall(
 _opType: int,
 _data = null
 ):
-	_ChunkMutex.lock()
+	while _ChunkMutex.try_lock(): pass
 	_ChunkQueue.push_back([ _opType, _data ])
 	_ChunkMutex.unlock()
 	_ChunkSem.post()
@@ -474,7 +445,11 @@ func __Chunk_ThreadLoop():
 	var _kData = 1
 	var _kCoroutine = 0
 	var _kIsFromSaving = 1
-	var _kFileRequestObj = 1
+
+	var _kSpawnNodePath = 0
+	var _kSpawnNodePos = 1
+	var _kSpawnNodeData = 2
+	var _kSpawnNodeName = 3
 
 	var _kFilePath := 0
 	var _kNodeData := 1
@@ -488,7 +463,6 @@ func __Chunk_ThreadLoop():
 	var _hyst = _ChunkHysteresis
 
 	var _bakedCoords = _BakedCoords
-	var _cachedResources = {}
 	var _loadedNodes = {}
 	_BakedCoords = []
 
@@ -497,7 +471,7 @@ func __Chunk_ThreadLoop():
 		_ChunkSem.wait()
 
 		# Pop ONLY one command
-		_ChunkMutex.lock()
+		while _ChunkMutex.try_lock(): pass
 		if _IsExit:
 			_ChunkMutex.unlock()
 			break
@@ -505,11 +479,11 @@ func __Chunk_ThreadLoop():
 		_ChunkMutex.unlock()
 
 		if _cmd[_kOp] == THREAD_RES_LOAD:
-			var _req = _cmd[_kFileRequestObj]
-			var _resPath = _req.ResourcePath
-			if !_cachedResources.has(_resPath):
-				_cachedResources[_resPath] = load(_resPath)
-			_req.Fulfill(_cachedResources[_resPath])
+			var _args = _cmd[_kData]
+			_args.push_front(load(_args[_kSpawnNodePath]))
+			while _AwaitingSpawnNodesMutex.try_lock(): pass
+			_AwaitingSpawnNodes.push_back(_args)
+			_AwaitingSpawnNodesMutex.unlock()
 			continue
 
 		if _cmd[_kOp] == File.READ:
@@ -594,12 +568,12 @@ func _ready():
 func _process(
 _deltaTime: float
 ):
-	_AwaitingSpawnNodesMutex.lock()
 	for _x in range(_NodeSpawnFrequency):
+		while _AwaitingSpawnNodesMutex.try_lock(): pass
 		var _args = _AwaitingSpawnNodes.pop_front()
+		_AwaitingSpawnNodesMutex.unlock()
 		if _args:
-			_SpawnNode(_args[0], _args[1], _args[2], _args[3])
-	_AwaitingSpawnNodesMutex.unlock()
+			_SpawnNode(_args[0], _args[1], _args[2], _args[3], _args[4])
 
 	for _observing in _Observings:
 		if _IsObservingCoordinateChanged(_observing):
@@ -613,7 +587,7 @@ _deltaTime: float
 
 func _exit_tree():
 	SaveAll()
-	_ChunkMutex.lock()
+	while _ChunkMutex.try_lock(): pass
 	_IsExit = true
 	_ChunkMutex.unlock()
 	_ChunkSem.post()
