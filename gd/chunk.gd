@@ -37,7 +37,7 @@ export var _ChunkDistance := 4
 export var _ChunkHysteresis := 2
 export var _ChunkDefaultPath := "res://saves/default"
 export var _DefaultCoroutineInterval := 1.0
-export var _NodeSpawnFrequency := 2
+export var _NodeSpawnFrequency := 3
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
@@ -374,23 +374,12 @@ _forceUpdate = false
 
 func _SpawnNode(
 _scn: PackedScene,
+_isStreamed: bool,
 _path: String,
 _pos, # '_pos' can be either 'Vector2' or 'Vector3'.
 _data: Dictionary,
 _name: String
 ):
-	var _isStreamed = (_name != "")
-	if _isStreamed:
-		if _Coroutines.has(_name):
-			# FIX: For some reason, thread still spills out loaded nodes, and this code block must exist. DO NOT REMOVE.
-			#GODOG_IGNORE
-			printerr(_name + " already exists.")
-			#GODOG_IGNORE
-			return
-	else:
-		_name = str("_", randi())
-		while _Coroutines.has(_name):
-			_name = str("_", randi())
 	var _node = _scn.instance()
 	_node.name = _name
 	var _posGetterName
@@ -480,7 +469,20 @@ func __Chunk_ThreadLoop():
 
 		if _cmd[_kOp] == THREAD_RES_LOAD:
 			var _args = _cmd[_kData]
-			_args.push_front(load(_args[_kSpawnNodePath]))
+			var _nodeName = _args[_kSpawnNodeName]
+			var _isStreamed = (_nodeName != "")
+			if _isStreamed:
+				if _loadedNodes.has(_nodeName):
+					continue
+			else:
+				_nodeName = str("_", randi())
+				while _loadedNodes.has(_nodeName):
+					_nodeName = str("_", randi())
+			var _res = load(_args[_kSpawnNodePath])
+			_loadedNodes[_nodeName] = true
+			_args[_kSpawnNodeName] = _nodeName
+			_args.push_front(_isStreamed)
+			_args.push_front(_res)
 			while _AwaitingSpawnNodesMutex.try_lock(): pass
 			_AwaitingSpawnNodes.push_back(_args)
 			_AwaitingSpawnNodesMutex.unlock()
@@ -505,8 +507,6 @@ func __Chunk_ThreadLoop():
 				if !(_data is Dictionary):
 					continue
 				for _nodeName in _data:
-					if _loadedNodes.has(_nodeName):
-						continue
 					var _obj: Dictionary = _data[_nodeName]
 					SpawnNode(
 						tr(_obj[_kFilePath]),
@@ -514,7 +514,6 @@ func __Chunk_ThreadLoop():
 						_obj[_kNodeData],
 						_nodeName
 					)
-					_loadedNodes[_nodeName] = true
 			continue
 		
 		if _cmd[_kOp] == File.WRITE:
@@ -573,7 +572,7 @@ _deltaTime: float
 		var _args = _AwaitingSpawnNodes.pop_front()
 		_AwaitingSpawnNodesMutex.unlock()
 		if _args:
-			_SpawnNode(_args[0], _args[1], _args[2], _args[3], _args[4])
+			_SpawnNode(_args[0], _args[1], _args[2], _args[3], _args[4], _args[5])
 
 	for _observing in _Observings:
 		if _IsObservingCoordinateChanged(_observing):
