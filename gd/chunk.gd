@@ -589,13 +589,10 @@ _deltaTime: float
 	for _observing in _Observings:
 		if _IsObservingCoordinateChanged(_observing):
 			__Chunk_PushCall(File.READ, _observing.CurrentCoordinate)
-	var _workCount = 0
 	for _ref in _Coroutines.values():
 		while _CurrentInterval > _ref.NextInterval:
 			_ref.NextInterval += _ref.Interval
 			_OnNodeProcess(_ref)
-			_workCount += 1
-	print(str("Current frame work count: ", _workCount,"/",_Coroutines.size()))
 	_CurrentInterval += _deltaTime
 
 
