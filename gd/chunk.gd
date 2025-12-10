@@ -20,6 +20,7 @@ var _IsExit := false
 
 var _BakedCoords := []
 var _Observings := []
+var _TotalObservingDistance := 0.0
 
 var _ChunkCullDistance = 0
 var _ChunkPath := ""
@@ -36,7 +37,7 @@ export var _ChunkSizePx := 1024.0
 export var _ChunkDistance := 4
 export var _ChunkHysteresis := 2
 export var _ChunkDefaultPath := "res://saves/default"
-export var _DefaultCoroutineInterval := 1.0
+export var _DefaultCoroutineInterval := 0.2
 export var _NodeSpawnFrequency := 3
 
 
@@ -44,8 +45,8 @@ export var _NodeSpawnFrequency := 3
 func AddObserving(
 _node: Node
 ):
-	var _obs = _CreateObserving(_node)
-	_Observings.push_back(_obs)
+	_Observings.push_back(_CreateObserving(_node))
+	_CalculateTotalObservingDistance()
 
 
 # Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
@@ -99,6 +100,7 @@ _path: String = ""
 	_ChunkCullDistance = _ChunkDistance + _ChunkHysteresis
 	_ChunkSizeHalfPx = _ChunkSizePx / 2.0
 	_ChunkPath = _path if _path else _ChunkDefaultPath
+	_CalculateTotalObservingDistance()
 
 	# Calculate chunk range for fast baking
 	var _range := range(-_ChunkDistance, _ChunkDistance)
@@ -121,6 +123,17 @@ _node: Node
 ):
 	var _coroutine = _Coroutines[_node.name]
 	_coroutine.NextInterval = _CurrentInterval - randf() * _coroutine.Interval
+
+
+# Remove specifed node from being observed by chunuk.
+func RemoveObserving(
+_node: Node
+):
+	for _obs in _Observings:
+		if _obs.NodeInInterest == _node:
+			_Observings.erase(_obs)
+			_CalculateTotalObservingDistance()
+			break
 
 
 # Set process interval for this node, can be as low as 0.1.
@@ -175,6 +188,10 @@ _pos: Vector2
 		(_pos.x + _half) / _size,
 		(_pos.y + _half) / _size
 	).floor()
+
+
+func _CalculateTotalObservingDistance():
+	_TotalObservingDistance = _Observings.size() * _ChunkCullDistance
 
 
 # Create coroutine data structure.
@@ -290,27 +307,22 @@ _node: Node
 func _OnNodeProcess(
 _coroutine: Dictionary
 ):
-	var _farCount := 0
+	var _farCount := 0.0
 	var _target = _coroutine.TargetNode
 	var _targetCoordinate: Vector2 = _CalculateChunkCoordinate(_ChunkSizePx, _ChunkSizeHalfPx, call(_coroutine.PositionGetterName, _target))
 	for _observing in _Observings:
-		if _ChunkCullDistance < _targetCoordinate.distance_to(_observing.CurrentCoordinate):
-			_farCount += 1
-	if _farCount == _Observings.size():
+		_farCount += _targetCoordinate.distance_to(_observing.CurrentCoordinate)
+	if _farCount >= _TotalObservingDistance:
 		remove_child(_target)
 		return
 	var _storage = _coroutine.DataStorage
-	var _beforeProcess = _storage.keys().hash()
-	if _beforeProcess != _coroutine.DataStorageHash:
-		_coroutine.DataStorageHash = _beforeProcess
+	var _keyHash = _storage.keys().hash()
+	if _keyHash != _coroutine.DataStorageHash:
+		_coroutine.DataStorageHash = _keyHash
 		_UpdateQuery(_coroutine)
-	for _key in _coroutine.BoundQueries.keys():
+	for _key in _coroutine.BoundQueries:
 		for _func in _QueryBinds[_key]:
 			_func.call_func(_target, _storage, _CurrentInterval)
-	var _afterProcess = _storage.keys().hash()
-	if _beforeProcess != _afterProcess:
-		_coroutine.DataStorageHash = _afterProcess
-		_UpdateQuery(_coroutine)
 
 
 # When node gets spawned, this will be called.
@@ -577,10 +589,13 @@ _deltaTime: float
 	for _observing in _Observings:
 		if _IsObservingCoordinateChanged(_observing):
 			__Chunk_PushCall(File.READ, _observing.CurrentCoordinate)
+	var _workCount = 0
 	for _ref in _Coroutines.values():
 		while _CurrentInterval > _ref.NextInterval:
 			_ref.NextInterval += _ref.Interval
 			_OnNodeProcess(_ref)
+			_workCount += 1
+	print(str("Current frame work count: ", _workCount,"/",_Coroutines.size()))
 	_CurrentInterval += _deltaTime
 
 
