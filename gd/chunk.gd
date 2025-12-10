@@ -357,7 +357,7 @@ _op: int
 	_name = str(_name).md5_text() + ".bin"
 	var _path: String = _ChunkPath + "/" + _name
 	var _file := File.new()
-	if [ File.READ_WRITE, File.READ ].has(_op):
+	if _op == File.READ:
 		if !_file.file_exists(_path):
 			_path = _ChunkDefaultPath + "/" + _name
 	if _file.open(_path, _op) != OK:
