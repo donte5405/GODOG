@@ -122,7 +122,7 @@ func ProcessInstantly(
 _node: Node
 ):
 	var _coroutine = _Coroutines[_node.name]
-	_coroutine.NextInterval = _CurrentInterval - randf() * _coroutine.Interval
+	_coroutine.NextInterval = _CurrentInterval - randf() * get_process_delta_time()
 
 
 # Remove specifed node from being observed by chunuk.
@@ -520,8 +520,11 @@ func __Chunk_ThreadLoop():
 					continue
 				for _nodeName in _data:
 					var _obj: Dictionary = _data[_nodeName]
+					var _tr = tr(_obj[_kFilePath])
+					if "@" in _tr:
+						_tr = _obj[_kFilePath]
 					SpawnNode(
-						tr(_obj[_kFilePath]),
+						_tr,
 						_obj[_kPosition],
 						_obj[_kNodeData],
 						_nodeName
