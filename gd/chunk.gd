@@ -3,6 +3,9 @@ extends Node
 
 const THREAD_RES_LOAD = 2398420123
 
+# Notifies when both saved chunks and default chunks do not exist.
+signal OnEmptyChunk(_coord)
+
 # Emits when node is spawned, and it doesn't need to be a brand-new node. Some spawned nodes are the ones that are restored from culled nodes.
 signal OnNodeSpawned(_node, _data)
 
@@ -28,8 +31,8 @@ var _ChunkSizeHalfPx := 0.0
 var _Coroutines := {}
 var _CurrentInterval := 0.0
 
-var _QueryBinds_OnDespawn = {}
-var _QueryBinds_OnSpawn = {}
+var _QueryBinds_OnEntry = {}
+var _QueryBinds_OnExit = {}
 var _QueryBinds = {}
 var _QueryExclusions = {}
 
@@ -50,23 +53,23 @@ _node: Node
 
 
 # Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
-func BindQueryOnDespawn(
+func BindQueryOnExit(
 _functions,
 _keys: Array,
 _exclusions = [],
 _forceUpdate = false
 ):
-	_BindQuery(_QueryBinds_OnDespawn, _functions, _keys, _exclusions, _forceUpdate)
+	_BindQuery(_QueryBinds_OnExit, _functions, _keys, _exclusions, _forceUpdate)
 
 
 # Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
-func BindQueryOnSpawn(
+func BindQueryOnEntry(
 _functions,
 _keys: Array,
 _exclusions = [],
 _forceUpdate = false
 ):
-	_BindQuery(_QueryBinds_OnSpawn, _functions, _keys, _exclusions, _forceUpdate)
+	_BindQuery(_QueryBinds_OnEntry, _functions, _keys, _exclusions, _forceUpdate)
 
 
 # Attach function binding to specified query. Functions will be called with parameters `node: Node` and `data: Dictionary`.
@@ -286,20 +289,28 @@ _observing: Dictionary
 	return true
 
 
+func _NotifyEmptyChunk(
+_coord: Vector2
+):
+	emit_signal("OnEmptyChunk", _coord)
+
+
 # This will be called when node gets culled.
 func _OnNodeDespawned(
 _node: Node
 ):
 	var _name = _node.name
+	if !_Coroutines.has(_name):
+		return
 	var _coroutine = _Coroutines[_name]
+	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
+		return
 	var _data = _coroutine.DataStorage
 	for _key in _coroutine.BoundQueries.keys():
-		for _func in _QueryBinds_OnDespawn[_key]:
+		for _func in _QueryBinds_OnExit[_key]:
 			_func.call_func(_node, _data, _CurrentInterval)
 	emit_signal("OnNodeDespawned", _node, _data)
 	_Coroutines.erase(_node.name)
-	if _coroutine.TargetNode is Dictionary && !_coroutine.IsStreamed:
-		return
 	_CullNode(_coroutine, false)
 
 
@@ -329,7 +340,10 @@ _coroutine: Dictionary
 func _OnNodeSpawned(
 _node: Node
 ):
-	var _coroutine = _Coroutines[_node.name]
+	var _name = _node.name
+	if !_Coroutines.has(_name):
+		return
+	var _coroutine = _Coroutines[_name]
 	var _data = _coroutine.DataStorage
 	if "_ChunkDefaultData" in _node:
 		for _res in _node._ChunkDefaultData:
@@ -343,9 +357,6 @@ _node: Node
 		_node._ChunkReady(self, _data)
 	_coroutine.NextInterval += _coroutine.Interval
 	_UpdateQuery(_coroutine)
-	for _key in _coroutine.BoundQueries.keys():
-		for _func in _QueryBinds_OnSpawn[_key]:
-			_func.call_func(_node, _data, _CurrentInterval)
 	emit_signal("OnNodeSpawned", _node, _data)
 
 
@@ -376,8 +387,8 @@ _forceUpdate = false
 	if !_QueryBinds.has(_psKeys) || _forceUpdate:
 		_exclusions.sort()
 		_QueryBinds[_psKeys] = []
-		_QueryBinds_OnSpawn[_psKeys] = []
-		_QueryBinds_OnDespawn[_psKeys] = []
+		_QueryBinds_OnExit[_psKeys] = []
+		_QueryBinds_OnEntry[_psKeys] = []
 		_QueryExclusions[_psKeys] = PoolStringArray(_exclusions)
 		for _coroutine in _Coroutines.values():
 			_UpdateQuery(_coroutine)
@@ -413,6 +424,7 @@ _coroutine: Dictionary
 ):
 	var _storage = _coroutine.DataStorage
 	var _bound = _coroutine.BoundQueries
+	var _node = _coroutine.TargetNode
 	for _query in _QueryBinds:
 		var _exists = true
 		for _key in _query:
@@ -425,8 +437,12 @@ _coroutine: Dictionary
 				_exists = false
 				break
 		if _exists:
+			for _func in _QueryBinds_OnEntry[_query]:
+				_func.call_func(_node, _storage, _CurrentInterval)
 			_bound[_query] = true
-		else:
+		elif _bound.has(_query):
+			for _func in _QueryBinds_OnExit[_query]:
+				_func.call_func(_node, _storage, _CurrentInterval)
 			_bound.erase(_query)
 
 
@@ -481,6 +497,9 @@ func __Chunk_ThreadLoop():
 
 		if _cmd[_kOp] == THREAD_RES_LOAD:
 			var _args = _cmd[_kData]
+			var _res = load(_args[_kSpawnNodePath])
+			if !_res:
+				continue
 			var _nodeName = _args[_kSpawnNodeName]
 			var _isStreamed = (_nodeName != "")
 			if _isStreamed:
@@ -490,7 +509,6 @@ func __Chunk_ThreadLoop():
 				_nodeName = str("_", randi())
 				while _loadedNodes.has(_nodeName):
 					_nodeName = str("_", randi())
-			var _res = load(_args[_kSpawnNodePath])
 			_loadedNodes[_nodeName] = true
 			_args[_kSpawnNodeName] = _nodeName
 			_args.push_front(_isStreamed)
@@ -514,6 +532,7 @@ func __Chunk_ThreadLoop():
 			for _chunkCoord in _chunkCoords:
 				var _file := _OpenFile(_chunkCoord, File.READ)
 				if !_file:
+					call_deferred("_NotifyEmptyChunk", _chunkCoord)
 					continue
 				var _data = _file.get_var()
 				if !(_data is Dictionary):
