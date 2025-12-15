@@ -34,7 +34,6 @@ var _CurrentInterval := 0.0
 var _QueryBinds_OnEntry = {}
 var _QueryBinds_OnExit = {}
 var _QueryBinds = {}
-var _QueryExclusions = {}
 
 export var _ChunkSizePx := 1024.0
 export var _ChunkDistance := 4
@@ -56,30 +55,27 @@ _node: Node
 func BindQueryOnExit(
 _functions,
 _keys: Array,
-_exclusions = [],
 _forceUpdate = false
 ):
-	_BindQuery(_QueryBinds_OnExit, _functions, _keys, _exclusions, _forceUpdate)
+	_BindQuery(_QueryBinds_OnExit, _functions, _keys, _forceUpdate)
 
 
 # Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
 func BindQueryOnEntry(
 _functions,
 _keys: Array,
-_exclusions = [],
 _forceUpdate = false
 ):
-	_BindQuery(_QueryBinds_OnEntry, _functions, _keys, _exclusions, _forceUpdate)
+	_BindQuery(_QueryBinds_OnEntry, _functions, _keys, _forceUpdate)
 
 
 # Attach function binding to specified query. Functions will be called with parameters `node: Node` and `data: Dictionary`.
 func BindQuery(
 _functions,
 _keys: Array,
-_exclusions = [],
 _forceUpdate = false
 ):
-	_BindQuery(_QueryBinds, _functions, _keys, _exclusions, _forceUpdate)
+	_BindQuery(_QueryBinds, _functions, _keys, _forceUpdate)
 
 
 # Properly destroys coroutine and cell chunk to not cull.
@@ -167,14 +163,11 @@ func _BindQuery(
 _to: Dictionary,
 _functions,
 _keys: Array,
-_exclusions: Array,
 _forceUpdate: bool
 ):
 	if _functions is FuncRef:
 		_functions = [ _functions ]
-	var _existingFuncs = _to[
-		_Query(_keys, _exclusions, _forceUpdate)
-	]
+	var _existingFuncs = _to[_Query(_keys, _forceUpdate)]
 	for _func in _functions:
 		_existingFuncs.push_back(_func)
 	for _coroutine in _Coroutines.values():
@@ -379,17 +372,14 @@ _op: int
 # Build query.
 func _Query(
 _keys: Array,
-_exclusions = [],
 _forceUpdate = false
 ):
 	_keys.sort()
 	var _psKeys = PoolStringArray(_keys)
 	if !_QueryBinds.has(_psKeys) || _forceUpdate:
-		_exclusions.sort()
 		_QueryBinds[_psKeys] = []
 		_QueryBinds_OnExit[_psKeys] = []
 		_QueryBinds_OnEntry[_psKeys] = []
-		_QueryExclusions[_psKeys] = PoolStringArray(_exclusions)
 		for _coroutine in _Coroutines.values():
 			_UpdateQuery(_coroutine)
 	return _psKeys
@@ -426,24 +416,16 @@ _coroutine: Dictionary
 	var _bound = _coroutine.BoundQueries
 	var _node = _coroutine.TargetNode
 	for _query in _QueryBinds:
-		var _exists = true
-		for _key in _query:
-			if _key in _storage:
-				continue
-			_exists = false
-			break
-		for _key in _QueryExclusions[_query]:
-			if _key in _storage:
-				_exists = false
-				break
-		if _exists:
-			for _func in _QueryBinds_OnEntry[_query]:
-				_func.call_func(_node, _storage, _CurrentInterval)
-			_bound[_query] = true
-		elif _bound.has(_query):
-			for _func in _QueryBinds_OnExit[_query]:
-				_func.call_func(_node, _storage, _CurrentInterval)
-			_bound.erase(_query)
+		if _storage.has_all(_query):
+			if !_bound.has(_query):
+				for _func in _QueryBinds_OnEntry[_query]:
+					_func.call_func(_node, _storage, _CurrentInterval)
+				_bound[_query] = true
+		else:
+			if _bound.has(_query):
+				for _func in _QueryBinds_OnExit[_query]:
+					_func.call_func(_node, _storage, _CurrentInterval)
+				_bound.erase(_query)
 
 
 # Submit RPC call to chunk thread.
