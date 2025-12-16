@@ -389,7 +389,7 @@ _keys: PoolStringArray
 	for _key in _keys:
 		if !(_key in _QueryMaskKeys):
 			_QueryMaskKeys[_key] = _QueryMaskNextKey
-			_QueryMaskNextKey *= 2 # Shift bit to the left
+			_QueryMaskNextKey <<= 1 # Shift bit to the left
 		_mask = _mask | _QueryMaskKeys[_key]
 	return _mask
 
