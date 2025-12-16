@@ -35,6 +35,9 @@ var _QueryBinds_OnEntry = {}
 var _QueryBinds_OnExit = {}
 var _QueryBinds = {}
 
+var _QueryMaskKeys = {}
+var _QueryMaskNextKey = 1
+
 export var _ChunkSizePx := 1024.0
 export var _ChunkDistance := 4
 export var _ChunkHysteresis := 2
@@ -54,28 +57,25 @@ _node: Node
 # Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
 func BindQueryOnExit(
 _functions,
-_keys: Array,
-_forceUpdate = false
+_keys: Array
 ):
-	_BindQuery(_QueryBinds_OnExit, _functions, _keys, _forceUpdate)
+	_BindQuery(_QueryBinds_OnExit, _functions, _keys)
 
 
 # Attach function binding to specified query to be called when node is spawned. Functions will be called with parameters `node: Node` and `data: Dictionary`.
 func BindQueryOnEntry(
 _functions,
-_keys: Array,
-_forceUpdate = false
+_keys: Array
 ):
-	_BindQuery(_QueryBinds_OnEntry, _functions, _keys, _forceUpdate)
+	_BindQuery(_QueryBinds_OnEntry, _functions, _keys)
 
 
 # Attach function binding to specified query. Functions will be called with parameters `node: Node` and `data: Dictionary`.
 func BindQuery(
 _functions,
-_keys: Array,
-_forceUpdate = false
+_keys: Array
 ):
-	_BindQuery(_QueryBinds, _functions, _keys, _forceUpdate)
+	_BindQuery(_QueryBinds, _functions, _keys)
 
 
 # Properly destroys coroutine and cell chunk to not cull.
@@ -162,12 +162,11 @@ _name: String = ""
 func _BindQuery(
 _to: Dictionary,
 _functions,
-_keys: Array,
-_forceUpdate: bool
+_keys: Array
 ):
 	if _functions is FuncRef:
 		_functions = [ _functions ]
-	var _existingFuncs = _to[_Query(_keys, _forceUpdate)]
+	var _existingFuncs = _to[_Query(_keys)]
 	for _func in _functions:
 		_existingFuncs.push_back(_func)
 	for _coroutine in _Coroutines.values():
@@ -203,12 +202,12 @@ _posPropName: String
 		NextInterval = _CurrentInterval + randf(),
 		IsStreamed = _isStreamed,
 		BoundQueries = {},
+		BoundQueryMask = 0,
 		Interval = _DefaultCoroutineInterval,
 
 		FilePath = _scnPath,
 		TargetNode = _node,
 		DataStorage = _storage,
-		DataStorageHash = _storage.hash(),
 		PositionGetterName = _posGetterName,
 		PositionPropertyName = _posPropName,
 	}
@@ -320,9 +319,9 @@ _coroutine: Dictionary
 		remove_child(_target)
 		return
 	var _storage = _coroutine.DataStorage
-	var _keyHash = _storage.keys().hash()
-	if _keyHash != _coroutine.DataStorageHash:
-		_coroutine.DataStorageHash = _keyHash
+	var _mask = _QueryMask(_storage.keys())
+	if _mask != _coroutine.BoundQueryMask:
+		_coroutine.BoundQueryMask = _mask
 		_UpdateQuery(_coroutine)
 	for _key in _coroutine.BoundQueries:
 		for _func in _QueryBinds[_key]:
@@ -371,18 +370,28 @@ _op: int
 
 # Build query.
 func _Query(
-_keys: Array,
-_forceUpdate = false
+_keys: Array
 ):
-	_keys.sort()
-	var _psKeys = PoolStringArray(_keys)
-	if !_QueryBinds.has(_psKeys) || _forceUpdate:
-		_QueryBinds[_psKeys] = []
-		_QueryBinds_OnExit[_psKeys] = []
-		_QueryBinds_OnEntry[_psKeys] = []
+	var _mask = _QueryMask(_keys)
+	if !_QueryBinds.has(_mask):
+		_QueryBinds[_mask] = []
+		_QueryBinds_OnExit[_mask] = []
+		_QueryBinds_OnEntry[_mask] = []
 		for _coroutine in _Coroutines.values():
 			_UpdateQuery(_coroutine)
-	return _psKeys
+	return _mask
+
+
+func _QueryMask(
+_keys: PoolStringArray
+):
+	var _mask = 0
+	for _key in _keys:
+		if !(_key in _QueryMaskKeys):
+			_QueryMaskKeys[_key] = _QueryMaskNextKey
+			_QueryMaskNextKey *= 2 # Shift bit to the left
+		_mask = _mask | _QueryMaskKeys[_key]
+	return _mask
 
 
 func _SpawnNode(
@@ -413,10 +422,11 @@ func _UpdateQuery(
 _coroutine: Dictionary
 ):
 	var _storage = _coroutine.DataStorage
+	var _mask = _coroutine.BoundQueryMask
 	var _bound = _coroutine.BoundQueries
 	var _node = _coroutine.TargetNode
 	for _query in _QueryBinds:
-		if _storage.has_all(_query):
+		if _mask & _query == _query:
 			if !_bound.has(_query):
 				for _func in _QueryBinds_OnEntry[_query]:
 					_func.call_func(_node, _storage, _CurrentInterval)
