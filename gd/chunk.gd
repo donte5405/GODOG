@@ -46,6 +46,33 @@ export var _DefaultCoroutineInterval := 0.2
 export var _NodeSpawnFrequency := 3
 
 
+class DataInterface extends Reference:
+	var Masking = 0;
+	var Referencing = {}
+	var _ChunkNode = Engine.get_meta("ChunkNode")
+	func _init(_dict: Dictionary):
+		Referencing = _dict
+		for _key in _dict:
+			Masking |= _ChunkNode._QueryMask(_key)
+	func GetValue(_key: String):
+		return Referencing.get(_key)
+	func HasValue(_key: String):
+		return Referencing.has(_key)
+	func Properties():
+		return Referencing.keys()
+	func SetDefault(_key: String, _value):
+		if !Referencing.has(_key):
+			Masking |= _ChunkNode._QueryMask(_key)
+			Referencing[_key] = _value
+		return Referencing[_key]
+	func SetValue(_key: String, _value):
+		Masking |= _ChunkNode._QueryMask(_key)
+		Referencing[_key] = _value
+	func Remove(_key: String):
+		Referencing.erase(_key)
+		Masking &= ~_ChunkNode._QueryMask(_key)
+
+
 # Add a node to be observed and has chunk algorithm tasks assigned.
 func AddObserving(
 _node: Node
@@ -207,7 +234,7 @@ _posPropName: String
 
 		FilePath = _scnPath,
 		TargetNode = _node,
-		DataStorage = _storage,
+		DataStorage = DataInterface.new(_storage),
 		PositionGetterName = _posGetterName,
 		PositionPropertyName = _posPropName,
 	}
@@ -319,9 +346,8 @@ _coroutine: Dictionary
 		remove_child(_target)
 		return
 	var _storage = _coroutine.DataStorage
-	var _mask = _QueryMask(_storage.keys())
-	if _mask != _coroutine.BoundQueryMask:
-		_coroutine.BoundQueryMask = _mask
+	if _storage.Masking != _coroutine.BoundQueryMask:
+		_coroutine.BoundQueryMask = _storage.Masking
 		_UpdateQuery(_coroutine)
 	for _key in _coroutine.BoundQueries:
 		for _func in _QueryBinds[_key]:
@@ -341,8 +367,7 @@ _node: Node
 		for _res in _node._ChunkDefaultData:
 			var _defaults = _res.Defaults
 			for _key in _defaults:
-				if !_data.has(_key):
-					_data[_key] = _defaults[_key]
+				_data.SetDefault(_key, _defaults[_key])
 	if "_ChunkNodeInterval" in _node:
 		_coroutine.Interval = _node._ChunkNodeInterval
 	if _node.has_method("_ChunkReady"):
@@ -372,7 +397,9 @@ _op: int
 func _Query(
 _keys: Array
 ):
-	var _mask = _QueryMask(_keys)
+	var _mask = 0
+	for _key in _keys:
+		_mask |= _QueryMask(_key)
 	if !_QueryBinds.has(_mask):
 		_QueryBinds[_mask] = []
 		_QueryBinds_OnExit[_mask] = []
@@ -383,15 +410,12 @@ _keys: Array
 
 
 func _QueryMask(
-_keys: PoolStringArray
+_key: String
 ):
-	var _mask = 0
-	for _key in _keys:
-		if !(_key in _QueryMaskKeys):
-			_QueryMaskKeys[_key] = _QueryMaskNextKey
-			_QueryMaskNextKey <<= 1 # Shift bit to the left
-		_mask = _mask | _QueryMaskKeys[_key]
-	return _mask
+	if !_QueryMaskKeys.has(_key):
+		_QueryMaskKeys[_key] = _QueryMaskNextKey
+		_QueryMaskNextKey <<= 1
+	return _QueryMaskKeys[_key]
 
 
 func _SpawnNode(
@@ -569,7 +593,7 @@ func __Chunk_ThreadLoop():
 			else:
 				var _serial := {
 					_kFilePath: tr(_coroutine.FilePath), # Always translate file paths.
-					_kNodeData: _coroutine.DataStorage,
+					_kNodeData: _coroutine.DataStorage.Referencing,
 					_kPosition: _node.get(_coroutine.PositionPropertyName),
 				}
 				if _destroyAfter:
@@ -611,6 +635,10 @@ _deltaTime: float
 	_CurrentInterval += _deltaTime
 
 
+func _enter_tree():
+	Engine.set_meta("ChunkNode", self)
+
+
 func _exit_tree():
 	SaveAll()
 	while _ChunkMutex.try_lock(): pass
@@ -618,3 +646,4 @@ func _exit_tree():
 	_ChunkMutex.unlock()
 	_ChunkSem.post()
 	_ChunkThread.wait_to_finish()
+	Engine.remove_meta("ChunkNode")
