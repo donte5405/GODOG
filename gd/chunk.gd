@@ -37,6 +37,7 @@ var _QueryBinds = {}
 
 var _QueryMaskKeys = {}
 var _QueryMaskNextKey = 1
+var _QueryMaskPoolInt = PoolIntArray([0])
 
 export var _ChunkSizePx := 1024.0
 export var _ChunkDistance := 4
@@ -47,13 +48,13 @@ export var _NodeSpawnFrequency := 3
 
 
 class DataInterface extends Reference:
-	var Masking = 0;
+	var Masking = PoolIntArray([0]);
 	var Referencing = {}
 	var _ChunkNode = Engine.get_meta("ChunkNode")
 	func _init(_dict: Dictionary):
 		Referencing = _dict
 		for _key in _dict:
-			Masking |= _ChunkNode._QueryMask(_key)
+			Masking = _ChunkNode._PoolIntArray_OrQuery(Masking, _key)
 	func GetValue(_key: String):
 		return Referencing.get(_key)
 	func HasValue(_key: String):
@@ -62,15 +63,47 @@ class DataInterface extends Reference:
 		return Referencing.keys()
 	func SetDefault(_key: String, _value):
 		if !Referencing.has(_key):
-			Masking |= _ChunkNode._QueryMask(_key)
+			Masking = _ChunkNode._PoolIntArray_OrQuery(Masking, _key)
 			Referencing[_key] = _value
 		return Referencing[_key]
 	func SetValue(_key: String, _value):
-		Masking |= _ChunkNode._QueryMask(_key)
+		Masking = _ChunkNode._PoolIntArray_OrQuery(Masking, _key)
 		Referencing[_key] = _value
 	func Remove(_key: String):
 		Referencing.erase(_key)
-		Masking &= ~_ChunkNode._QueryMask(_key)
+		Masking = _ChunkNode._PoolIntArray_NandQuery(Masking, _key)
+
+
+func _PoolIntArray_OrQuery(
+_a1: PoolIntArray,
+_key: String
+) -> PoolIntArray:
+	var _a2 = _QueryMask(_key)
+	_a1.resize(_a2.size())
+	for _i in range(_a2.size()):
+		_a1[_i] |= _a2[_i]
+	return _a1
+
+
+func _PoolIntArray_NandQuery(
+_a1: PoolIntArray,
+_key: String
+) -> PoolIntArray:
+	var _a2 = _QueryMask(_key)
+	_a1.resize(_a2.size())
+	for _i in range(_a2.size()):
+		_a1[_i] &= ~_a2[_i]
+	return _a1
+
+
+func _PoolIntArray_MatchPartial(
+_a1: PoolIntArray,
+_a2: PoolIntArray
+) -> bool:
+	_a1.resize(_a2.size())
+	for _i in range(_a2.size()):
+		_a1[_i] &= _a2[_i]
+	return _a1 == _a2
 
 
 # Add a node to be observed and has chunk algorithm tasks assigned.
@@ -229,7 +262,7 @@ _posPropName: String
 		NextInterval = _CurrentInterval + randf(),
 		IsStreamed = _isStreamed,
 		BoundQueries = {},
-		BoundQueryMask = 0,
+		BoundQueryMask = PoolIntArray([0]),
 		Interval = _DefaultCoroutineInterval,
 
 		FilePath = _scnPath,
@@ -397,9 +430,9 @@ _op: int
 func _Query(
 _keys: Array
 ):
-	var _mask = 0
+	var _mask = PoolIntArray([0])
 	for _key in _keys:
-		_mask |= _QueryMask(_key)
+		_mask = _PoolIntArray_OrQuery(_mask, _key)
 	if !_QueryBinds.has(_mask):
 		_QueryBinds[_mask] = []
 		_QueryBinds_OnExit[_mask] = []
@@ -413,7 +446,13 @@ func _QueryMask(
 _key: String
 ):
 	if !_QueryMaskKeys.has(_key):
-		_QueryMaskKeys[_key] = _QueryMaskNextKey
+		var _i = _QueryMaskPoolInt.size() - 1
+		if _QueryMaskPoolInt[_i] == -2147483648:
+			_QueryMaskPoolInt.push_back(0)
+			_QueryMaskNextKey = 0
+			_i += 1
+		_QueryMaskPoolInt[_i] = _QueryMaskNextKey
+		_QueryMaskKeys[_key] = _QueryMaskPoolInt
 		_QueryMaskNextKey <<= 1
 	return _QueryMaskKeys[_key]
 
@@ -450,7 +489,7 @@ _coroutine: Dictionary
 	var _bound = _coroutine.BoundQueries
 	var _node = _coroutine.TargetNode
 	for _query in _QueryBinds:
-		if _mask & _query == _query:
+		if _PoolIntArray_MatchPartial(_mask, _query):
 			if !_bound.has(_query):
 				for _func in _QueryBinds_OnEntry[_query]:
 					_func.call_func(_node, _storage, _CurrentInterval)
@@ -572,7 +611,7 @@ func __Chunk_ThreadLoop():
 			var _coroutine = _args[_kCoroutine]
 			var _destroyAfter = !_args[_kIsFromSaving]
 
-			# Calculate node position & coord
+			# Calculate node position and coord
 			var _node = _coroutine.TargetNode
 			var _nodeName = _node.name
 			var _position = call(_coroutine.PositionGetterName, _node)
