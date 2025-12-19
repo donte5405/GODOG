@@ -79,7 +79,7 @@ _a1: PoolIntArray,
 _key: String
 ) -> PoolIntArray:
 	var _a2 = _QueryMask(_key)
-	_a1.resize(_a2.size())
+	_a1.resize(max(_a1.size(), _a2.size()))
 	for _i in range(_a2.size()):
 		_a1[_i] |= _a2[_i]
 	return _a1
@@ -90,7 +90,7 @@ _a1: PoolIntArray,
 _key: String
 ) -> PoolIntArray:
 	var _a2 = _QueryMask(_key)
-	_a1.resize(_a2.size())
+	_a1.resize(max(_a1.size(), _a2.size()))
 	for _i in range(_a2.size()):
 		_a1[_i] &= ~_a2[_i]
 	return _a1
@@ -100,7 +100,7 @@ func _PoolIntArray_MatchPartial(
 _a1: PoolIntArray,
 _a2: PoolIntArray
 ) -> bool:
-	_a1.resize(_a2.size())
+	_a1.resize(max(_a1.size(), _a2.size()))
 	for _i in range(_a2.size()):
 		_a1[_i] &= _a2[_i]
 	return _a1 == _a2
