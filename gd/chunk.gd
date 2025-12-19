@@ -259,7 +259,7 @@ _posGetterName: String,
 _posPropName: String
 ):
 	return {
-		NextInterval = _CurrentInterval + randf(),
+		NextInterval = _CurrentInterval + randf() * _DefaultCoroutineInterval,
 		IsStreamed = _isStreamed,
 		BoundQueries = {},
 		BoundQueryMask = PoolIntArray([0]),
