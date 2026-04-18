@@ -1,7 +1,7 @@
 //@ts-check
 /**
  * Shuffle an array.
- * @param {Array} arr 
+ * @param {Array<any>} arr 
  */
 export function shuffleArray(arr) {
 	fastShuffle(arr);
@@ -10,7 +10,7 @@ export function shuffleArray(arr) {
 
 /**
  * Fast array shuffle function (ChatGPT gave me this).
- * @param {Array} arr 
+ * @param {Array<any>} arr 
  */
 function fastShuffle(arr) {
 	for (let i = arr.length - 1; i > 0; i--) {

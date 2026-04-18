@@ -42,6 +42,9 @@ export class Configuration {
 	/** If this project will have export parameters stripped. */
 	get stripExportParams() { return this.check("noExportParams"); }
 
+	/**
+	 * @param {Record<string,any>} o 
+	 */
 	constructor(o) {
 		if (o) this.data = o;
 		if (o["scrambleImports"] === true) {

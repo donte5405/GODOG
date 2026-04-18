@@ -110,7 +110,7 @@ export class Labels {
 	/** @type {Record<string,string>} List of strings mapped from the list. */
 	listMap = {};
 	/** @type {GetId?} */
-	getId;
+	getId = null;
 	/** @type {Record<string,number>} List of string maps that contain label occurence data. */
 	occurenceMap = {};
 
