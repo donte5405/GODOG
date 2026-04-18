@@ -129,6 +129,8 @@ for (const fileLocation of tempLocationFiles) {
 	if (checkFileExtension(fileLocation, "gd")) {
 		// Parse GDScript.
 		await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation));
+	} else if (checkFileExtension(fileLocation, "cs")) {
+		await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation, "cs"));
 	} else if (checkFileExtension(fileLocation, godotFiles)) {
 		// Parse GDResources.
 		await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation, "tscn"));

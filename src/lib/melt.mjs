@@ -167,6 +167,7 @@ export function addPossibleGodotPath(path) {
  * @param {string} rootPath 
  */
 export async function generateNullFiles(rootPath) {
+	await writeFile(rootPath + "/_null.cs", "\n");
 	await writeFile(rootPath + "/_null.gd", "extends Object\n");
 	await writeFile(rootPath + "/_null.tres", "[gd_resource type=\"Resource\" format=2]\n\n[resource]\n");
 	await writeFile(rootPath + "/_null.tscn", "[gd_scene format=2]\n\n[node name=\"NullScene\" type=\"Node\"]\n");
@@ -202,7 +203,7 @@ export async function meltDirectory(rootPath, labels) {
 			insertMap(map, mapsToChange);
 			continue;
 		}
-		if (checkFileExtension(oldPath, [ "tscn", "tres", "gd" ])) {
+		if (checkFileExtension(oldPath, [ "tscn", "tres", "gd", "cs" ])) {
 			insertMap(map, mapsToChange);
 			insertMap(map.melt(), mapsToMelt);
 			continue;
@@ -240,6 +241,8 @@ export async function meltDirectory(rootPath, labels) {
 			if (!str.includes(path)) continue;
 			if (checkFileExtension(path, "gd")) {
 				str = formatAllPossibleStringTypes(str, path, "res://_null.gd");
+			} else if(checkFileExtension(path, "cs")) {
+				str = formatAllPossibleStringTypes(str, path, "res://_null.cs");
 			} else if (checkFileExtension(path, "tres")) {
 				str = formatAllPossibleStringTypes(str, path, "res://_null.tres");
 			} else if (checkFileExtension(path, "tscn")) {

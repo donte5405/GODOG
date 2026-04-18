@@ -168,7 +168,7 @@ export class GDParser {
 
 	/**
 	 * Construct a token parser.
-	 * @param {"gd"|"clang"|"tscn"|"path"} mode
+	 * @param {"gd"|"cs"|"clang"|"tscn"|"path"} mode
 	 */
 	constructor(mode = "gd") {
 		this.mode = mode;
@@ -178,7 +178,7 @@ export class GDParser {
 	 * Parse a file and get the result immediately.
 	 * @param {string} fileName
 	 * @param {string} rootDirectory
-	 * @param {"gd"|"clang"|"tscn"|"path"} mode
+	 * @param {"gd"|"cs"|"clang"|"tscn"|"path"} mode
 	 */
 	static async parseFile(fileName, rootDirectory, mode = "gd") {
 		return new this(mode).tellFileName(fileName).tellRootDirectory(rootDirectory).parse(await readFile(fileName, { encoding: "utf-8" }), mode);
@@ -187,7 +187,7 @@ export class GDParser {
 	/**
 	 * Parse a string and get the result immediately.
 	 * @param {string} str 
-	 * @param {"gd"|"clang"|"tscn"|"path"} mode
+	 * @param {"gd"|"cs"|"clang"|"tscn"|"path"} mode
 	 */
 	static parseStr(str, mode = "gd") {
 		const o = new this(mode);
@@ -282,7 +282,7 @@ export class GDParser {
 	 * Parse specified token and decide if the specified token should be returned as what.
 	 * @param {string|string[]} tokens
 	 * @param {number} i
-	 * @param {"gd"|"clang"|"tscn"|"path"} mode
+	 * @param {"gd"|"cs"|"clang"|"tscn"|"path"} mode
 	 * @returns {string}
 	 */
 	parseToken(tokens, i = 0, mode = this.mode) {
@@ -436,6 +436,13 @@ export class GDParser {
 		if (asciiNumbers.includes(token[0])) {
 			// Ignore labels starting with numbers.
 			return token;
+		}
+		if (mode === "cs") {
+			// Use verbatim identifier to 'kinda' safely workaround CS parsing limitations.
+			if (isLabel(token) && tokens[i - 1] === "@") {
+				tokens[i - 1] = " "; // Giving an empty space before variable name.
+				return labels.get(token);
+			}
 		}
 		if (mode === "path") { // For path strings.
 			if (isLabel(token)) return labels.get(token);

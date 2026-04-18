@@ -7,6 +7,15 @@ const errUnknownState = new Error("Unknown state reached, seems like GODOG bug."
 const errBracketsNotClosed = new Error("Some brackets aren't closed properly.");
 
 
+const clangOrCs = [ "clang", "cs" ];
+/**
+ * @param {string} str 
+ */
+function isClangOrCs(str) {
+	return clangOrCs.includes(str);
+}
+
+
 const gdComboSymbols = [
 	// Common in most languages.
 	"**=", "<<=", ">>=",
@@ -81,7 +90,7 @@ function formatGdScript(str) {
 /**
  * Tokenise GDScript into something able to be processed.
  * @param {string} str 
- * @param {"gd"|"clang"|"tscn"|"path"} mode
+ * @param {"gd"|"cs"|"clang"|"tscn"|"path"} mode
  */
 export function tokenise(str, mode = "gd") {
 	if (mode === "gd") {
@@ -149,7 +158,7 @@ export function tokenise(str, mode = "gd") {
 					}
 					break;
 				case `"`: case `'`:
-					if (mode === "clang" && str[i - 1] === "R") { // Raw string literals.
+					if (isClangOrCs(mode) && str[i - 1] === "R") { // Raw string literals.
 						let ii = 1;
 						let customDelimeter = "";
 						for (; i + ii < str.length; ii++) {
@@ -170,7 +179,7 @@ export function tokenise(str, mode = "gd") {
 					setState("string");
 					return;
 				case "/":
-					if (mode === "clang") {
+					if (isClangOrCs(mode)) {
 						if (c === "/") {
 							const cNxt = str[i + 1];
 							if (cNxt === "/") {
@@ -237,7 +246,7 @@ export function tokenise(str, mode = "gd") {
 					pushBuffer();
 					return true;
 				}
-				if (mode === "clang" && [ "'" ].includes(c)) {
+				if (isClangOrCs(mode) && [ "'" ].includes(c)) {
 					pushBuffer();
 					return true;
 				}
@@ -357,7 +366,7 @@ export function tokenise(str, mode = "gd") {
 /**
  * Assemble GD Tokens into string.
  * @param {string[]} token 
- * @param {"gd"|"clang"|"tscn"|"path"} mode
+ * @param {"gd"|"cs"|"clang"|"tscn"|"path"} mode
  */
 export function assemble(token, mode = "gd") {
 	/** @type {string[]} */
@@ -376,7 +385,7 @@ export function assemble(token, mode = "gd") {
 				} else if (t2nd != "\n") {
 					if (
 						(mode == "gd" && t1st[0] === "#") ||
-						(mode == "clang" && t1st[0] === "/" && (["/", "*"].includes(t1st[1]))) ||
+						(isClangOrCs(mode) && t1st[0] === "/" && (["/", "*"].includes(t1st[1]))) ||
 						(mode == "tscn" && t1st[0] === ";")
 					) {
 						newToken.push("\n");
