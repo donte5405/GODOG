@@ -388,6 +388,15 @@ export class GDParser {
 					if (tokens[i - 5] === "." && tokens[i - 4] === "sub" && tokens[i - 3] === "(" && isString(tokens[i - 1]) && tokens[i - 2] === ",") {
 						return token;
 					}
+					// Preserve GUI strings with special syntax.
+					if (tokens[i - 4] === "gui" && tokens[i - 3] === "." && tokens[i - 2] === "txt" && tokens[i - 1] === "(" && tokens [i + 1] === ")") {
+						tokens[i - 4] = "";
+						tokens[i - 3] = "";
+						tokens[i - 2] = "";
+						tokens[i - 1] = "";
+						tokens[i + 1] = "";
+						return token;
+					}
 				} else if (mode === "tscn") {
 					if (tokens[i - 8] === "application" && tokens[i - 4] === "config" && tokens[i - 3] === "/" && tokens[i - 2] === "name" && tokens[i - 1] === "=") {
 						return token; // Prevent game name to be changed (crucial, because Godot references this for file saving).
