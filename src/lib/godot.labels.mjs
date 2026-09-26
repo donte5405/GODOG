@@ -123,7 +123,7 @@ export async function huntLabels(sourcePath) {
 
 	// HUNT
 	for (const includedDir of includedDirs) {
-		for (const filePath of fileList(join(sourcePath, includedDir))) {
+		for (const filePath of fileList(join(sourcePath, includedDir)).files) {
 			if (checkFileExtension(filePath, [ "h", "hpp", "c", "cpp", "xml" ])) {
 				console.log("Processing '" + filePath + "'...");
 				const srcStr = await readFile(filePath, { encoding: "utf-8" });

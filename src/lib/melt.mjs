@@ -180,7 +180,7 @@ export async function generateNullFiles(rootPath) {
  * @param {Labels} labels
  */
 export async function meltDirectory(rootPath, labels) {
-	const filePaths = fileList(rootPath);
+	const { files: filePaths, filesToNotMelt: toNotMelt } = fileList(rootPath);
 	const config = getConfig();
 	Remap.rootPath = rootPath;
 	Remap.labels = labels;
@@ -195,7 +195,7 @@ export async function meltDirectory(rootPath, labels) {
 	for (const filePath of filePaths) {
 		const map = remap(rootPath, filePath);
 		const oldPath = map.oldPath;
-		if (pathsToNotMelt.includes(oldPath)) {
+		if (pathsToNotMelt.includes(oldPath) || toNotMelt.includes(oldPath)) {
 			// Don't melt user specified files.
 			continue;
 		}

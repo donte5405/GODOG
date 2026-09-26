@@ -302,6 +302,8 @@ export var player_name := ""
 export var player_level := 1
 ```
 
+To ignore an entire directory and its subdirectories, simply create an empty `godogexpose` file on its root.
+
 ---
 
 ### CAUTION (MUST READ)

@@ -3,8 +3,8 @@ import * as Path from "path";
 import * as Fs from "fs";
 
 
+const dontMeltDirsWithFiles = [ "godogexpose" ];
 const excludedDirsWithFiles = [ "godogignore" ];
-
 
 /**
  * @param {string} dir 
@@ -20,6 +20,18 @@ function isThisDirectoryExcluded(dir, excludeDirsWithFiles) {
 	return false;
 }
 
+/**
+ * @param {string} dir 
+ */
+function isThisDirectoryMarkedToNotMelt(dir) {
+	for (const indicatorFile of [ ...dontMeltDirsWithFiles ]) {
+		const iAbsolute = Path.join(dir, indicatorFile);
+		if (Fs.existsSync(iAbsolute)) {
+			return true;
+		}
+	}
+	return false;
+}
 
 /**
  * Convert specified paths to relative paths.
@@ -54,10 +66,15 @@ export function convertToRelativePath(rootPath, path) {
  * @param {string[]} excludeDirsWithFiles List of files/directories that's an indicator to disregard the entire directory.
  * @param {string[]} ignoredFiles List of files/directories to be ignored.
  * @param {string[]} [files] List of previous files (blank if not specified).
+ * @param {Record<string, boolean>} [filesToNotMelt] List of files to not be melted.
  */
-export function fileList(dir, excludeDirsWithFiles = [], ignoredFiles = [], files = []) {
-	if (isThisDirectoryExcluded(dir, [ ...excludeDirsWithFiles, ...excludedDirsWithFiles ])) {
-		return files;
+export function fileList(dir, excludeDirsWithFiles = [], ignoredFiles = [], files = [], filesToNotMelt = {}, markedToNotMelt = false) {
+	const ret = () => { return { files, filesToNotMelt: Object.keys(filesToNotMelt) } };
+	markedToNotMelt = markedToNotMelt || isThisDirectoryMarkedToNotMelt(dir);
+	if (!markedToNotMelt) {
+		if (isThisDirectoryExcluded(dir, [ ...excludeDirsWithFiles, ...excludedDirsWithFiles ])) {
+			return ret();
+		}
 	}
 	Fs.readdirSync(dir).forEach(file => {
 		if (ignoredFiles.includes(file)) return;
@@ -67,12 +84,15 @@ export function fileList(dir, excludeDirsWithFiles = [], ignoredFiles = [], file
 		// }
 		const absolute = Path.join(dir, file);
 		if (Fs.statSync(absolute).isDirectory()) {
-			fileList(absolute, excludeDirsWithFiles, ignoredFiles, files);
+			fileList(absolute, excludeDirsWithFiles, ignoredFiles, files, filesToNotMelt, markedToNotMelt);
 			return;
+		}
+		if (markedToNotMelt) {
+			filesToNotMelt[absolute] = true;
 		}
 		files.push(absolute);
 	});
-	return files;
+	return ret();
 }
 
 

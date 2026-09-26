@@ -43,7 +43,7 @@ config.projDirPath = dirLocation;
 // Dry run.
 const isDryRun = !process.argv[3];
 console.log("Analysing the entire project...");
-for (const fileLocation of fileList(dirLocation)) {
+for (const fileLocation of fileList(dirLocation).files) {
 	if (checkFileExtension(fileLocation, "gd")) {
 		// Check GDScripts.
 		await GDParser.parseFile(fileLocation, dirLocation);
@@ -125,7 +125,7 @@ flushTranslations();
 
 // Scramble!
 console.log("Screwing entire project...");
-for (const fileLocation of tempLocationFiles) {
+for (const fileLocation of tempLocationFiles.files) {
 	if (checkFileExtension(fileLocation, "gd")) {
 		// Parse GDScript.
 		await writeFile(fileLocation, await GDParser.parseFile(fileLocation, tempLocation));
@@ -166,7 +166,7 @@ if (hasServerExportOption) { // Export server version.
 		await mkdir(destPath, fsOptions);
 		await filesCopySelectively(tempLocation, destPath, [ excludedDirWithFile ]);
 		// Strip code blocks.
-		for (const fileLocation of fileList(destPath)) {
+		for (const fileLocation of fileList(destPath).files) {
 			if (checkFileExtension(fileLocation, "gd")) {
 				await writeFile(fileLocation, await stripGdBlockFromFile(fileLocation, blockIndicator));
 			}
