@@ -238,7 +238,7 @@ export async function meltDirectory(rootPath, labels) {
 			}
 			continue;
 		}
-		if (!checkFileExtension(oldPath, config.meltFiles)) {
+		if (checkFileExtension(oldPath, config.meltFiles)) {
 			decideToMelt(map);
 			continue;
 		}
