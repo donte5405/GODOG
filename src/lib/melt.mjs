@@ -7,22 +7,16 @@ import { Labels } from "./labels.mjs";
 import { join } from "path";
 import { getConfig } from "./options.mjs";
 
-
 const PROJECT_FILE_NAME = "project.godot";
 
+/** @type {Record<string,boolean>} */
+const userDefinedPathsToNotMelt = {};
 
-/** @type {string[]} List of file paths to not melt. */
-const pathsToNotMelt = [];
+/** @type {Record<string,boolean>} */
+const possibleGodotPaths = {};
 
-
-/** @type {Record<string, Remap>} */
-const allRemaps = {};
-/** @type {Remap[]} */
-const mapsToChange = [];
-/** @type {Remap[]} */
-const mapsToMelt = [];
-/** @type {string[]} */
-const oldGodotPaths = [];
+/** @type {Record<string, string>} */
+const fileRemaps = {};
 
 
 /**
@@ -50,29 +44,6 @@ function cleanEmptyFoldersRecursively(folder) {
 		rmdirSync(folder);
 		return;
 	}
-}
-
-
-/**
- * @param {string} rootPath 
- * @param {string} filePath 
- */
-function remap(rootPath, filePath) {
-	const oldPath = filePath.split(rootPath)[1];
-	if (!allRemaps[oldPath]) {
-		allRemaps[oldPath] = new Remap(oldPath);
-	}
-	return allRemaps[oldPath];
-}
-
-
-/**
- * @param {Remap} map 
- * @param {Remap[]} to 
- */
-function insertMap(map, to) {
-	if (to.includes(map)) return;
-	to.push(map);
 }
 
 
@@ -109,6 +80,9 @@ class Remap {
 		return "res://" + this.newPath;
 	}
 	get newPath() {
+		if (!this.melted) {
+			return this.oldPath;
+		}
 		if (!this.myLabel) {
 			this.myLabel = Remap.labels.get(); // It must be here to prevent labels depletion by it getting spammed in the constructor.
 		}
@@ -145,8 +119,8 @@ function formatAllPossibleStringTypes(str, old, newOne) {
  * @param {string} path 
  */
 export function dontMeltPath(path) {
-	if (pathsToNotMelt.includes(path)) return;
-	pathsToNotMelt.push(path);
+	path = "res://" + path;
+	userDefinedPathsToNotMelt[path] = true;
 }
 
 
@@ -156,9 +130,7 @@ export function dontMeltPath(path) {
  */
 export function addPossibleGodotPath(path) {
 	path = "res://" + path;
-	if (oldGodotPaths.indexOf(path) === -1) {
-		oldGodotPaths.push(path);
-	}
+	possibleGodotPaths[path] = true;
 }
 
 
@@ -180,7 +152,46 @@ export async function generateNullFiles(rootPath) {
  * @param {Labels} labels
  */
 export async function meltDirectory(rootPath, labels) {
-	const { files: filePaths, filesToNotMelt: toNotMelt } = fileList(rootPath);
+	/** @type {Record<string, Remap>} */
+	const allRemaps = {};
+
+	/** @type {Remap[]} */
+	const mapsToMelt = [];
+
+	/** @type {Remap[]} */
+	const mapsToChange = [];
+	
+	const {
+		files: filePaths,
+		filesToNotMelt,
+	} = fileList(rootPath);
+	
+	const toNotMelt = [
+		...filesToNotMelt,
+		...Object.keys(userDefinedPathsToNotMelt),
+	];
+
+	/**
+	 * @param {string} rootPath
+	 * @param {string} filePath
+	 */
+	function remap(rootPath, filePath) {
+		const oldPath = filePath.split(rootPath)[1];
+		if (!allRemaps[oldPath]) {
+			allRemaps[oldPath] = new Remap(oldPath);
+		}
+		return allRemaps[oldPath];
+	}
+
+	/**
+	 * @param {Remap} map
+	 * @param {Remap[]} to
+	 */
+	function insertMap(map, to) {
+		if (to.includes(map)) return;
+		to.push(map);
+	}
+
 	const config = getConfig();
 	Remap.rootPath = rootPath;
 	Remap.labels = labels;
@@ -195,27 +206,40 @@ export async function meltDirectory(rootPath, labels) {
 	for (const filePath of filePaths) {
 		const map = remap(rootPath, filePath);
 		const oldPath = map.oldPath;
-		if (pathsToNotMelt.includes(oldPath) || toNotMelt.includes(oldPath)) {
-			// Don't melt user specified files.
-			continue;
-		}
-		if (checkFileExtension(oldPath, [ "cfg", "godot", "csv" ]) || hasFile("default_env.tres", oldPath)) {
+		if (oldPath.endsWith(".import")) continue;
+		/** @param {Remap} m */
+		const decideToMelt = (m) => {
+			if (toNotMelt.includes(oldPath)) {
+				return false;
+			}
+			m.melt();
+			insertMap(m, mapsToMelt);
+			return true;
+		};
+		if (checkFileExtension(oldPath, ["cfg", "godot", "csv"]) || hasFile("default_env.tres", oldPath)) {
 			insertMap(map, mapsToChange);
 			continue;
 		}
-		if (checkFileExtension(oldPath, [ "tscn", "tres", "gd", "cs" ])) {
+		if (checkFileExtension(oldPath, ["tscn", "tres", "gd", "cs"])) {
 			insertMap(map, mapsToChange);
-			insertMap(map.melt(), mapsToMelt);
+			decideToMelt(map);
 			continue;
 		}
 		if (checkFileExtension(oldPath, config.meltImports)) {
-			try { await access(map.oldFilePath + ".import", constants.F_OK); } catch { continue; } // If it can't open the file, skip (as the file isn't imported).
+			try {
+				await access(map.oldFilePath + ".import", constants.F_OK);
+			} catch {
+				// If it can't open the file, skip (as the file isn't imported).
+				continue;
+			}
 			insertMap(map, mapsToChange);
-			insertMap(map.importable().melt(), mapsToMelt);
+			if (decideToMelt(map)) {
+				map.importable();
+			}
 			continue;
 		}
-		if (checkFileExtension(oldPath, config.meltFiles)) {
-			insertMap(map, mapsToMelt);
+		if (!checkFileExtension(oldPath, config.meltFiles)) {
+			decideToMelt(map);
 			continue;
 		}
 	}
@@ -226,42 +250,40 @@ export async function meltDirectory(rootPath, labels) {
 			await rename(map.oldFilePath + ".import", map.newFilePath + ".import");
 		}
 	}
+	// Re-scan
+	const { files: movedFiles } = fileList(rootPath);
 	// Alternate paths.
 	for (const map of mapsToChange) {
 		const filePath = map.filePath + (map.isImportable ? ".import" : "");
 		let str = await readFile(filePath, { encoding: "utf-8" });
 		for (const meltedMap of mapsToMelt) {
-			const oldGodotPath = meltedMap.oldGodotPath;
-			const newGodotPath = meltedMap.newGodotPath;
-			str = formatAllPossibleStringTypes(str, oldGodotPath, newGodotPath);
-		}
-		for (const path of oldGodotPaths) {
-			// If there's nonexisting files (e.g., server files that somehow get referenced to the client),
-			// they will be replaced with dummy file references.
-			if (!str.includes(path)) continue;
-			if (checkFileExtension(path, "gd")) {
-				str = formatAllPossibleStringTypes(str, path, "res://_null.gd");
-			} else if(checkFileExtension(path, "cs")) {
-				str = formatAllPossibleStringTypes(str, path, "res://_null.cs");
-			} else if (checkFileExtension(path, "tres")) {
-				str = formatAllPossibleStringTypes(str, path, "res://_null.tres");
-			} else if (checkFileExtension(path, "tscn")) {
-				str = formatAllPossibleStringTypes(str, path, "res://_null.tscn");
+			str = formatAllPossibleStringTypes(str, meltedMap.oldGodotPath, meltedMap.newGodotPath);
+			if (!movedFiles.includes(meltedMap.newPath)) {
+				// If there's nonexisting files (e.g., server files that somehow get referenced to the client),
+				// they will be replaced with dummy file references.
+				let path = meltedMap.oldGodotPath;
+				if (checkFileExtension(path, "gd")) {
+					str = formatAllPossibleStringTypes(str, path, "res://_null.gd");
+				} else if (checkFileExtension(path, "cs")) {
+					str = formatAllPossibleStringTypes(str, path, "res://_null.cs");
+				} else if (checkFileExtension(path, "tres")) {
+					str = formatAllPossibleStringTypes(str, path, "res://_null.tres");
+				} else if (checkFileExtension(path, "tscn")) {
+					str = formatAllPossibleStringTypes(str, path, "res://_null.tscn");
+				}
 			}
 		}
 		await writeFile(filePath, str);
 	}
 	// Clear empty directories.
 	cleanEmptyFoldersRecursively(rootPath);
+	for (const remap of mapsToMelt) {
+		fileRemaps[remap.oldGodotPath] = remap.newGodotPath;
+		fileRemaps[remap.newGodotPath] = remap.oldGodotPath;
+	}
+	return fileRemaps;
 }
 
-
 export function getFileRemaps() {
-	/** @type {Record<string, string>} */
-	const map = {};
-	for (const remap of mapsToMelt) {
-		map[remap.oldGodotPath] = remap.newGodotPath;
-		map[remap.newGodotPath] = remap.oldGodotPath;
-	}
-	return map;
+	return fileRemaps;
 }

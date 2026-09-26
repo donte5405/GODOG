@@ -68,8 +68,16 @@ export function convertToRelativePath(rootPath, path) {
  * @param {string[]} [files] List of previous files (blank if not specified).
  * @param {Record<string, boolean>} [filesToNotMelt] List of files to not be melted.
  */
-export function fileList(dir, excludeDirsWithFiles = [], ignoredFiles = [], files = [], filesToNotMelt = {}, markedToNotMelt = false) {
-	const ret = () => { return { files, filesToNotMelt: Object.keys(filesToNotMelt) } };
+export function fileList(dir, excludeDirsWithFiles = [], ignoredFiles = [], files = [], filesToNotMelt = {}, markedToNotMelt = false, isRoot = true) {
+	const ret = () => {
+		const toNotMelt = Object.keys(filesToNotMelt);
+		if (isRoot) {
+			for (let i = 0; i < toNotMelt.length; i++) {
+				toNotMelt[i] = toNotMelt[i].slice(dir.length + 1, toNotMelt[i].length)
+			}
+		}
+		return { files, filesToNotMelt: toNotMelt };
+	};
 	markedToNotMelt = markedToNotMelt || isThisDirectoryMarkedToNotMelt(dir);
 	if (!markedToNotMelt) {
 		if (isThisDirectoryExcluded(dir, [ ...excludeDirsWithFiles, ...excludedDirsWithFiles ])) {
@@ -82,9 +90,15 @@ export function fileList(dir, excludeDirsWithFiles = [], ignoredFiles = [], file
 		//	 case ".":
 		//		 return;
 		// }
+		switch (file) {
+			case ".git":
+				return;
+			case ".import":
+				return;
+		}
 		const absolute = Path.join(dir, file);
 		if (Fs.statSync(absolute).isDirectory()) {
-			fileList(absolute, excludeDirsWithFiles, ignoredFiles, files, filesToNotMelt, markedToNotMelt);
+			fileList(absolute, excludeDirsWithFiles, ignoredFiles, files, filesToNotMelt, markedToNotMelt, false);
 			return;
 		}
 		if (markedToNotMelt) {
