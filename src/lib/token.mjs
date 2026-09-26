@@ -29,7 +29,7 @@ const gdComboSymbols = [
 
 /**
  * Converts space to tab.
- * @param {string} str 
+ * @param {string} str
  */
 function formatGdScript(str) {
 	const strs = str.split("\n");
@@ -53,11 +53,14 @@ function formatGdScript(str) {
 				strs[i] = lines.join("");
 			}
 		}
-		if (strs[i].includes(`"""`)) {
-			if (strs[i].split(`"""`).length > 2) {
-				throw errUnsupportedNestedMultiline;
-			}
+		const tripleQuoteCount = strs[i].split(`"""`).length - 1;
+		if (tripleQuoteCount > 2) {
+			throw errUnsupportedNestedMultiline;
+		}
+		if (tripleQuoteCount === 1) {
 			inMultilineString = !inMultilineString;
+		} else if (tripleQuoteCount === 2) {
+			inMultilineString = false;
 		}
 	}
 	// Get rid of excessive newlines.
@@ -70,7 +73,7 @@ function formatGdScript(str) {
 		if (strs[i] === "") {
 			if (newlineCount < 1) {
 				strs[i] = "\n";
-				newlineCount ++;
+				newlineCount++;
 				continue;
 			}
 			strs[i] = "";
